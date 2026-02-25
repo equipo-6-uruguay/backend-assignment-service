@@ -2,7 +2,6 @@
 Adaptador de eventos entrantes.
 Traduce eventos externos a acciones en el dominio.
 """
-import random
 from typing import Dict, Any
 
 from assignments.domain.repository import AssignmentRepository
