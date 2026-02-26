@@ -1,0 +1,28 @@
+[flake8]
+max-line-length = 120
+exclude =
+    migrations,
+    __pycache__,
+    venv,
+    .venv
+
+# W291: trailing whitespace
+# W293: whitespace before a comment (blank line contains whitespace)
+# W391: blank line at end of file
+# Estos son cosméticos y afectan a 230+ líneas preexistentes en todo el codebase.
+# Se limpiarán en un refactor dedicado.
+ignore =
+    W291,
+    W293,
+    W391
+
+per-file-ignores =
+    # consumer.py usa Django setup antes de los imports — patrón intencional
+    messaging/consumer.py:E402,E303
+    # admin.py tiene 1 blank line entre imports y clase — preexistente
+    assignments/admin.py:E302
+    # Imports no usados en archivos preexistentes (no introducidos por nosotros)
+    assignments/application/use_cases/update_assigned_user.py:F401
+    assignments/test_integration.py:F401
+    messaging/test_consumer_reconnection.py:F401
+    messaging/test_dead_letter_queue.py:F401

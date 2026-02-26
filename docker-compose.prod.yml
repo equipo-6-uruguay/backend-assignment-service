@@ -1,0 +1,118 @@
+# =============================================================================
+# docker-compose.prod.yml — Producción (imágenes desde GHCR)
+# =============================================================================
+# Requisito: las imágenes deben estar publicadas en GitHub Container Registry.
+# Workflow: .github/workflows/publish.yml las publica automáticamente.
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml down
+#
+# IMPORTANTE: Crear un archivo .env con las variables reales antes de levantar.
+#             Ver .env.example como referencia.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - assignment-net
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - assignment-net
+
+  # ---------------------------------------------------------------------------
+  # Backend API (gunicorn)
+  # ---------------------------------------------------------------------------
+  backend:
+    image: ghcr.io/equipo-6-uruguay/backend-assignment-service:latest
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn assessment_service.wsgi:application
+             --bind 0.0.0.0:8001
+             --workers 3
+             --timeout 120"
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - assignment-net
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker
+  # ---------------------------------------------------------------------------
+  celery-worker:
+    image: ghcr.io/equipo-6-uruguay/backend-assignment-service:latest
+    command: celery -A assessment_service worker --loglevel=info
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - assignment-net
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ Consumer
+  # ---------------------------------------------------------------------------
+  consumer:
+    image: ghcr.io/equipo-6-uruguay/backend-assignment-service:latest
+    command: python messaging/consumer.py
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - assignment-net
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  assignment-net:
+    driver: bridge

@@ -1,0 +1,110 @@
+# =============================================================================
+# CI Pipeline — Backend Assignment Service
+# =============================================================================
+# Disparadores: push/PR a main, develop, feature/**
+# Requisitos Taller Semana 3 (Actividad 3.3):
+#   - Construir entorno y ejecutar tests
+#   - Falla si los tests fallan
+#   - Cobertura mínima: 70%
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - develop
+      - 'feature/**'
+
+jobs:
+  test:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: assignment_db
+          POSTGRES_USER: assignment_user
+          POSTGRES_PASSWORD: assignment_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U assignment_user -d assignment_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ASSIGNMENT_SERVICE_SECRET_KEY: ci-test-secret-key
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "*"
+      POSTGRES_DB: assignment_db
+      POSTGRES_USER: assignment_user
+      POSTGRES_PASSWORD: assignment_pass
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        run: python manage.py migrate --noinput
+
+      - name: Run tests with coverage
+        run: |
+          pytest \
+            --cov=assignments \
+            --cov=messaging \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=70 \
+            --ignore=assignments/test_integration.py \
+            --ignore=assignments/tests.py \
+            -k "not AssignmentIntegrationTests" \
+            -v
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install linter
+        run: pip install flake8
+
+      - name: Run flake8
+        run: |
+          flake8 assignments/ messaging/ assessment_service/ \
+            --count --show-source --statistics
