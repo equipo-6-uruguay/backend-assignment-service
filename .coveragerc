@@ -1,0 +1,15 @@
+[run]
+omit =
+    # Old monolithic test file (replaced by assignments/tests/test_assignments.py)
+    assignments/tests.py
+    # Integration tests that require RabbitMQ (skipped in CI)
+    assignments/test_integration.py
+    # Migration files
+    */migrations/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:

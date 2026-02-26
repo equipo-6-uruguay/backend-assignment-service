@@ -35,6 +35,13 @@ DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 _allowed_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",") if host.strip()]
 
+if not DEBUG and not ALLOWED_HOSTS:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS must be set when DEBUG is False. "
+        "Example: DJANGO_ALLOWED_HOSTS=api.example.com,localhost"
+    )
+
 
 # Application definition
 
@@ -133,7 +140,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # Celery configuration
-CELERY_BROKER_URL = 'amqp://guest:guest@rabbitmq:5672//'
+_rabbitmq_user = os.getenv('RABBITMQ_USER', 'guest')
+_rabbitmq_password = os.getenv('RABBITMQ_PASSWORD', 'guest')
+_rabbitmq_host = os.getenv('RABBITMQ_HOST', 'rabbitmq')
+_rabbitmq_port = os.getenv('RABBITMQ_PORT', '5672')
+_rabbitmq_vhost = os.getenv('RABBITMQ_VHOST', '/')
+CELERY_BROKER_URL = f'amqp://{_rabbitmq_user}:{_rabbitmq_password}@{_rabbitmq_host}:{_rabbitmq_port}/{_rabbitmq_vhost}'
 CELERY_RESULT_BACKEND = 'rpc://'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -186,7 +198,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 _csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(",") if o.strip()]
-if not CSRF_TRUSTED_ORIGINS:
+if DEBUG and not CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS = [
         'http://localhost:5173',
     ]

@@ -36,7 +36,7 @@ class ChangeAssignmentPriority:
             Assignment modificada, o None si no existe asignación para el ticket
             
         Raises:
-            ValueError: Si la nueva autoridad es invalida
+            ValueError: Si la nueva prioridad es invalida
         """
         # 1. Buscar asignación por ticket_id
         assignment = self.repository.find_by_ticket_id(ticket_id)

@@ -1,0 +1,23 @@
+# =============================================================================
+# .dockerignore — Keep Docker build context clean
+# =============================================================================
+.git
+.github
+.env
+.env.*
+!.env.example
+*.md
+docker-compose*.yml
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info
+.venv
+venv
+.vscode
+.idea
+node_modules
