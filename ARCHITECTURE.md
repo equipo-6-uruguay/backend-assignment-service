@@ -1,4 +1,4 @@
-# ARCHITECTURE — Assignment Service
+$$# ARCHITECTURE — Assignment Service
 
 **Proyecto:** backend-assignment-service  
 **Servicio:** assignment-service (microservicio Django DDD + EDA)  
