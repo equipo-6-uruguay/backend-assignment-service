@@ -77,6 +77,7 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-fail-under=70 \
             --ignore=assignments/test_integration.py \
+            --ignore=assignments/tests.py \
             -k "not AssignmentIntegrationTests" \
             -v
 

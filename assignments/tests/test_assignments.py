@@ -428,7 +428,8 @@ class AssignmentAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    def test_create_assignment_via_api(self):
+    @patch('assignments.infrastructure.messaging.event_publisher.RabbitMQEventPublisher.publish')
+    def test_create_assignment_via_api(self, mock_publish):
         """POST /api/assignments/ debe crear asignación"""
         response = self.client.post(
             '/api/assignments/',
@@ -470,7 +471,8 @@ class AssignmentAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
-    def test_reassign_ticket_via_api(self):
+    @patch('assignments.infrastructure.messaging.event_publisher.RabbitMQEventPublisher.publish')
+    def test_reassign_ticket_via_api(self, mock_publish):
         """POST /api/assignments/reassign/ debe reasignar ticket"""
         # Crear asignación inicial
         TicketAssignment.objects.create(
