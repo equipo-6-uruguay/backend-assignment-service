@@ -106,6 +106,4 @@ jobs:
       - name: Run flake8
         run: |
           flake8 assignments/ messaging/ assessment_service/ \
-            --max-line-length=120 \
-            --exclude=migrations \
             --count --show-source --statistics
