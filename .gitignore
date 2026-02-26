@@ -48,8 +48,6 @@ media/
 # --- OS ---
 .DS_Store
 Thumbs.db
-<<<<<<< Updated upstream
-=======
 
 # --- Local docs ---
 *.md
@@ -58,4 +56,3 @@ Thumbs.db
 !/GHERKIN_MATRIX.md
 !/TEST_PLAN_V3.md
 !/USERSTORIES Y CRITERIOS DE ACEPTACION.md
->>>>>>> Stashed changes
