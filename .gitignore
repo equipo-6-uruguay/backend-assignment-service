@@ -48,3 +48,7 @@ media/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Local docs ---
+*.md
+!/README.md
