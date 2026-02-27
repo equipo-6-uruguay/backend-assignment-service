@@ -11,14 +11,14 @@
 
 Este documento cataloga de forma exhaustiva los "dolores" (problemas técnicos, arquitectónicos y de calidad) identificados en el código base actual del monolito heredado. El objetivo es visibilizar la deuda técnica acumulada para priorizar la refactorización hacia una **Clean Architecture** (Robert C. Martin).
 
-Se identificaron **12+ hallazgos activos** distribuidos en 10 categorías, con **5 de severidad alta** y **7 de severidad media**.
+Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con **4 de severidad alta** y **6 de severidad media**.
 
 ### Estado de trazabilidad (2026-02-27)
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **2 PRs abiertas** (#6, #8).
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02**.
+- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **3 PRs abiertas** (#6, #8, #14).
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
 ### Top 5 Problemas Críticos
@@ -29,7 +29,7 @@ Se identificaron **12+ hallazgos activos** distribuidos en 10 categorías, con *
 | 2 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
 | 3 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
 | 4 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | Error 500 no controlado ante IDs huérfanos |
-| 5 | Sin paginación global en API | Escalabilidad | Degradación de rendimiento con volúmenes altos |
+| 5 | Tarea Celery sin retry/backoff/autoretry explícitos | Resiliencia EDA | Baja tolerancia a fallos transitorios |
 
 ---
 
@@ -364,21 +364,7 @@ def _safe_close_fn(connection) -> None:
 
 #### [SCL-01] Sin paginación global y queryset completo
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/views.py` (L18-28), `assessment_service/settings.py` (L161-175) |
-
-**Descripción:**  
-`ModelViewSet` expone el queryset completo sin límite. `REST_FRAMEWORK` no define `DEFAULT_PAGINATION_CLASS` ni `PAGE_SIZE`, degradando rendimiento con volúmenes altos.
-
-**Impacto:** Escalabilidad, rendimiento
-
-**Evidencia:**
-```python
-class TicketAssignmentViewSet(viewsets.ModelViewSet):
-    queryset = TicketAssignment.objects.all().order_by('-assigned_at')
-    serializer_class = TicketAssignmentSerializer
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14; pendiente merge a `develop`).
 
 ---
 
@@ -474,23 +460,7 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [DOC-01] Serializer sin validaciones explícitas del contrato de entrada
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `assignments/serializers.py` (líneas 1-9) |
-
-**Descripción:**  
-No hay métodos `validate_*` para `ticket_id` ni `priority`. La validación se delega completamente al dominio, pero la capa HTTP no documenta ni normaliza los errores para el consumidor de la API.
-
-**Impacto:** Mantenibilidad, consistencia de API
-
-**Evidencia:**
-```python
-class TicketAssignmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TicketAssignment
-        fields = ['id', 'ticket_id', 'priority', 'assigned_at', 'assigned_to']
-        read_only_fields = ['id', 'assigned_at']
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14; pendiente merge a `develop`).
 
 ---
 
@@ -620,8 +590,6 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | **DUP-01 + MOD-01**: Tests duplicados y archivo "god file" | SRP + separación por capa/caso de uso | Suites mantenibles, rápidas y con menor costo de cambio | Reorganizar tests por dominio/aplicación/infra/API y eliminar duplicados con fixtures reutilizables | Media |
 | **TST-01**: Tests replican lógica del consumer en lugar de invocar el módulo real | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
 | **SLD-01**: `event_publisher` inyectado pero no usado | ISP + SRP | Contratos más pequeños y menor ruido en dependencias | Segregar interfaces y dependencias por caso de uso (solo lo que consume cada uno) | Media |
-| **DOC-01**: Serializer sin validaciones de contrato | Interface Adapters: validación en borde | Entradas más seguras y consistentes antes de llegar al dominio | Añadir validadores explícitos por campo y mensajes de error de contrato | Media |
-| **SCL-01**: Sin paginación por defecto | OCP + separación de concerns en interfaz | Escalabilidad de API y menor carga por request | Definir política global de paginación en capa de presentación (DRF settings) | Media |
 | **DEB-01**: Divergencia migración vs modelo | Single Source of Truth en límites de persistencia + SRP | Menos drift entre código y esquema; menos incidentes en deploy | Corregir contrato ORM↔migración y añadir chequeo de consistencia en CI | Alta |
 
 ---
@@ -639,8 +607,6 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | ID | Tarea | Esfuerzo | Beneficio |
 |---|---|---|---|
 | ERR-01 | Agregar manejo de `DoesNotExist` en repository update | Medio | Estabilidad |
-| DOC-01 | Añadir validaciones explícitas al serializer | Medio | Consistencia de API |
-| SCL-01 | Configurar paginación global en DRF settings | Medio | Escalabilidad |
 | SLD-02 | Crear jerarquía de excepciones de dominio | Medio | Dominio expresivo |
 | EDA-02 | Agregar retry/backoff a task Celery | Medio | Resiliencia EDA |
 | DUP-01 | Consolidar tests de integración duplicados | Medio | Mantenibilidad |
