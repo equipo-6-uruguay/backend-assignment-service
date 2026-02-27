@@ -728,7 +728,6 @@ class CeleryTaskTests(TestCase):
         )
 
 
-<<<<<<< HEAD
 class CeleryRetryPolicyTests(TestCase):
     """Tests que verifican la configuración de retry policy en tareas Celery."""
 
@@ -763,7 +762,8 @@ class CeleryRetryPolicyTests(TestCase):
         # Bound tasks have a 'self' parameter — they are instances of Task
         # We can check by verifying the task name exists and it has request attr
         self.assertTrue(hasattr(tasks.process_ticket_event, 'request'))
-=======
+
+
 class ContainerTests(TestCase):
     """Tests del composition root de assignments."""
 
@@ -792,4 +792,3 @@ class ContainerTests(TestCase):
         container = get_assignment_container()
         self.assertIsInstance(container.repository, AssignmentRepository)
         self.assertIsInstance(container.event_publisher, EventPublisher)
->>>>>>> 89e3221 (feat: Implement composition root for dependency management and refactor handlers and views to utilize it)
