@@ -421,6 +421,8 @@ class TicketEventAdapterTests(TestCase):
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 })
 class AssignmentAPITests(TestCase):
     """Tests de la API REST"""
@@ -456,20 +458,41 @@ class AssignmentAPITests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('priority', response.data)
+
+    def test_create_assignment_empty_ticket_id(self):
+        """POST con ticket_id vacío/whitespace debe retornar 400"""
+        response = self.client.post(
+            '/api/assignments/',
+            {
+                'ticket_id': '   ',
+                'priority': 'high'
+            },
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('ticket_id', response.data)
 
     def test_list_assignments(self):
         """GET /api/assignments/ debe listar asignaciones"""
-        # Crear algunas asignaciones
-        TicketAssignment.objects.create(
-            ticket_id='API-LIST-1',
-            priority='high',
-            assigned_at=timezone.now()
-        )
+        # Crear más de una página de resultados
+        for index in range(25):
+            TicketAssignment.objects.create(
+                ticket_id=f'API-LIST-{index}',
+                priority='high',
+                assigned_at=timezone.now()
+            )
 
         response = self.client.get('/api/assignments/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
+        self.assertIn('count', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('previous', response.data)
+        self.assertIn('results', response.data)
+        self.assertEqual(response.data['count'], 25)
+        self.assertEqual(len(response.data['results']), 20)
 
     @patch('assignments.infrastructure.messaging.event_publisher.RabbitMQEventPublisher.publish')
     def test_reassign_ticket_via_api(self, mock_publish):
