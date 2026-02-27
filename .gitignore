@@ -48,8 +48,6 @@ media/
 # --- OS ---
 .DS_Store
 Thumbs.db
-<<<<<<< Updated upstream
-=======
 
 # --- Local docs ---
 *.md
@@ -57,12 +55,9 @@ Thumbs.db
 !/.github/agents/iris.agent.md
 !/.github/agents/shannahan.agent.md
 !/.github/instructions/copilot-instructions.md
-!
+!/DOLORES.md
+!/DOLORES_RESUELTOS.md
 !/ARCHITECTURE.md
 !/GHERKIN_MATRIX.md
 !/TEST_PLAN_V3.md
 !/USERSTORIES Y CRITERIOS DE ACEPTACION.md
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> 259c1a7 (docs: Add Gherkin Test Execution Matrix and Test Plan V3 for Assignment Service)

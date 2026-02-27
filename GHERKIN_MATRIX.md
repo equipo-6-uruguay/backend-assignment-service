@@ -1,4 +1,4 @@
-$$# Matriz de Ejecución de Pruebas Gherkin
+# Matriz de Ejecución de Pruebas Gherkin
 
 **Proyecto:** backend-assignment-service (Django DDD + EDA microservice)  
 **Fecha:** 2026-02-26  

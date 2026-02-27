@@ -1,4 +1,4 @@
-$$# TEST PLAN V3 — Assignment Service
+# TEST PLAN V3 — Assignment Service
 
 > **Proyecto:** backend-assignment-service  
 > **Versión del Plan:** 3.0  
@@ -103,7 +103,7 @@ Definir la estrategia, alcance, herramientas, calendario y gestión de riesgos p
 | `ReassignTicket` use case | Cambio de prioridad con evento, misma prioridad sin evento, ticket inexistente |
 | `UpdateAssignedUser` use case | Asignar, reasignar, desasignar usuario |
 | `TicketEventAdapter` | Traducción evento externo → caso de uso, eventos `ticket.created` y `ticket.priority_changed` |
-| `TicketAssignmentViewSet` | POST `/assignments/`, GET `/assignments/`, GET `/assignments/{id}/`, POST `/assignments/reassign/`, PATCH `/assignments/{id}/assign-user/`, DELETE `/assignments/{id}/` |
+| `TicketAssignmentViewSet` | POST `/api/assignments/`, GET `/api/assignments/`, GET `/api/assignments/{id}/`, POST `/api/assignments/reassign/`, PATCH `/api/assignments/{id}/assign-user/`, DELETE `/api/assignments/{id}/` |
 | `process_ticket_event` task | Ejecución Celery eager, delegación a handlers |
 | `TicketAssignmentSerializer` | Validación de campos, prioridades válidas, serialización |
 
