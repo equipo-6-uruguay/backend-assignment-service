@@ -49,15 +49,15 @@ media/
 .DS_Store
 Thumbs.db
 
-# --- Markdown policy (whitelist) ---
+# --- Local docs ---
 *.md
 !/README.md
-!/ARCHITECTURE.md
-!/GHERKIN_MATRIX.md
+!/.github/agents/iris.agent.md
+!/.github/agents/shannahan.agent.md
+!/.github/instructions/copilot-instructions.md
 !/DOLORES.md
 !/DOLORES_RESUELTOS.md
+!/ARCHITECTURE.md
+!/GHERKIN_MATRIX.md
 !/TEST_PLAN_V3.md
 !/USERSTORIES Y CRITERIOS DE ACEPTACION.md
-!/.github/copilot-instructions.md
-!/.github/agents/*.md
-!/.github/instructions/*.md
