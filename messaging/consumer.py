@@ -27,7 +27,7 @@ import json
 
 from typing import Any
 
-from assignments.tasks import process_ticket_event
+from messaging.handlers import handle_ticket_event
 import time
 import logging
 
@@ -54,15 +54,23 @@ DLQ_ROUTING_KEY_SUFFIX: str = ".dead"
 def callback(ch, method, properties, body):
     """
     Callback cuando llega un mensaje.
-    Delega el procesamiento a Celery.
+    Procesa el evento de forma síncrona y confirma (ACK) solo tras
+    procesamiento exitoso.  En caso de error, rechaza el mensaje
+    sin reencolar (NACK → DLQ).
     """
     try:
         event_data = json.loads(body)
-        process_ticket_event.delay(event_data)
-        logger.info("Event received and sent to Celery: %s", event_data)
+    except json.JSONDecodeError as exc:
+        logger.error("Invalid JSON in message body: %s", exc)
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        return
+
+    try:
+        handle_ticket_event(event_data)
+        logger.info("Event processed successfully: %s", event_data.get('event_type', 'unknown'))
         ch.basic_ack(delivery_tag=method.delivery_tag)
-    except Exception as e:
-        logger.error("Error processing message: %s", e)
+    except Exception as exc:
+        logger.exception("Error processing event (routing to DLQ): %s", exc)
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 

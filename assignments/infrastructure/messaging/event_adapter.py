@@ -2,12 +2,17 @@
 Adaptador de eventos entrantes.
 Traduce eventos externos a acciones en el dominio.
 """
+import logging
+
+import pika.exceptions
 from typing import Dict, Any
 
 from assignments.domain.repository import AssignmentRepository
 from assignments.application.event_publisher import EventPublisher
 from assignments.application.use_cases.create_assignment import CreateAssignment
 from assignments.application.use_cases.change_assignment_priority import ChangeAssignmentPriority
+
+logger = logging.getLogger(__name__)
 
 
 class TicketEventAdapter:
@@ -40,7 +45,7 @@ class TicketEventAdapter:
         ticket_id = event_data.get('ticket_id')
         
         if not ticket_id:
-            print("[ASSIGNMENT] Evento sin ticket_id, ignorando")
+            logger.warning("Evento TicketCreated sin ticket_id, ignorando")
             return
         
         # Convertir ticket_id a string (puede venir como int desde el evento)
@@ -52,12 +57,25 @@ class TicketEventAdapter:
         
         try:
             assignment = use_case.execute(ticket_id=ticket_id, priority=priority)
-            print(
-                f"[ASSIGNMENT] Ticket {ticket_id} asignado con prioridad "
-                f"{assignment.priority}"
+            logger.info(
+                "Ticket %s asignado con prioridad %s",
+                ticket_id,
+                assignment.priority,
             )
-        except Exception as e:
-            print(f"[ASSIGNMENT] Error procesando ticket {ticket_id}: {e}")
+        except ValueError as exc:
+            logger.error(
+                "Error de validación procesando ticket %s: %s", ticket_id, exc
+            )
+            raise
+        except pika.exceptions.AMQPError as exc:
+            logger.error(
+                "Error de mensajería procesando ticket %s: %s", ticket_id, exc
+            )
+            raise
+        except Exception as exc:
+            logger.exception(
+                "Error inesperado procesando ticket %s: %s", ticket_id, exc
+            )
             raise
             
     def handle_ticket_priority_changed(self, event_data: Dict[str, Any]) -> None:
@@ -71,7 +89,9 @@ class TicketEventAdapter:
         new_priority = event_data.get('new_priority')
         
         if not ticket_id or not new_priority:
-            print("[ASSIGNMENT] Evento de cambio de prioridad sin ticket_id o new_priority, ignorando")
+            logger.warning(
+                "Evento de cambio de prioridad sin ticket_id o new_priority, ignorando"
+            )
             return
             
         ticket_id = str(ticket_id)
@@ -82,14 +102,35 @@ class TicketEventAdapter:
         try:
             assignment = use_case.execute(ticket_id=ticket_id, new_priority=new_priority)
             if assignment:
-                print(
-                    f"[ASSIGNMENT] Prioridad del ticket {ticket_id} "
-                    f"actualizada a {assignment.priority}"
+                logger.info(
+                    "Prioridad del ticket %s actualizada a %s",
+                    ticket_id,
+                    assignment.priority,
                 )
             else:
-                print(f"[ASSIGNMENT] No se encontró asignación para el ticket {ticket_id}")
-        except Exception as e:
-            print(f"[ASSIGNMENT] Error actualizando prioridad del ticket {ticket_id}: {e}")
+                logger.warning(
+                    "No se encontró asignación para el ticket %s", ticket_id
+                )
+        except ValueError as exc:
+            logger.error(
+                "Error de validación actualizando prioridad del ticket %s: %s",
+                ticket_id,
+                exc,
+            )
+            raise
+        except pika.exceptions.AMQPError as exc:
+            logger.error(
+                "Error de mensajería actualizando prioridad del ticket %s: %s",
+                ticket_id,
+                exc,
+            )
+            raise
+        except Exception as exc:
+            logger.exception(
+                "Error inesperado actualizando prioridad del ticket %s: %s",
+                ticket_id,
+                exc,
+            )
             raise
     
     def _determine_priority(self, event_data: Dict[str, Any]) -> str:
