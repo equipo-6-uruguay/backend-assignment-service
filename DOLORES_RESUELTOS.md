@@ -54,15 +54,9 @@ Se migraron **11 dolores** por cierre y merge de quick wins/correcciones (incluy
 | TST-02 | ✅ Resuelto | 2026-02-27 | Issue #3 cerrado + PR #4 mergeado |
 | SCL-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
 | DOC-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
-<<<<<<< HEAD
 | EDA-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
 | EDA-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
 | ERR-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
-=======
-| EDA-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #15 |
-| EDA-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #15 |
-| ERR-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #15 |
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
@@ -73,8 +67,4 @@ Se migraron **11 dolores** por cierre y merge de quick wins/correcciones (incluy
 | 2026-02-26 | CFG-01, SEC-01, SEC-02, NOM-01, NOM-02 | Issue #1 cerrado / PR #2 mergeado en `develop` | Auditoría repo |
 | 2026-02-27 | TST-02 | Issue #3 cerrado / PR #4 mergeado en `main` | Auditoría repo |
 | 2026-02-27 | SCL-01, DOC-01 | PR #14 abierto (pendiente merge a `develop`) | Auditoría repo |
-<<<<<<< HEAD
 | 2026-02-27 | EDA-01, EDA-02, ERR-02 | PR #16 (rama `feature/resiliencia-post-procesamiento`) | Auditoría repo |
-=======
-| 2026-02-27 | EDA-01, EDA-02, ERR-02 | Issue #15 (rama `feature/resiliencia-post-procesamiento`) | Auditoría repo |
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)

@@ -17,11 +17,7 @@ Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con *
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-<<<<<<< HEAD
 - Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #16).
-=======
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #15).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 - Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
@@ -470,21 +466,13 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [EDA-01] ACK prematuro del mensaje antes de confirmar procesamiento real
 
-<<<<<<< HEAD
 ✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
-=======
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
 #### [EDA-02] Tarea Celery sin retry/backoff/autoretry explícitos
 
-<<<<<<< HEAD
 ✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
-=======
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
@@ -545,11 +533,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | **SCL-02**: Conexión RabbitMQ nueva por mensaje | SRP en infraestructura + OCP | Mejor throughput, menor latencia y menor presión de red | Introducir publisher con conexión/canal reutilizable y lifecycle controlado | Media |
 | **ERR-01/02/03**: Errores genéricos y sin control | SRP + DIP + manejo explícito de límites | Errores predecibles y reintentos sólo cuando corresponde | Definir taxonomía de excepciones (dominio/aplicación/infra) y políticas de retry por tipo | Alta |
 | **SLD-02**: `ValueError` genérico en dominio | Modelo de dominio explícito + SRP | Reglas de negocio expresivas y trazables | Crear jerarquía de `DomainException` y mapearla en capa de aplicación | Alta |
-<<<<<<< HEAD
 | **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en PR #16) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
-=======
-| **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en Issue #15) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 | **DUP-01 + MOD-01**: Tests duplicados y archivo "god file" | SRP + separación por capa/caso de uso | Suites mantenibles, rápidas y con menor costo de cambio | Reorganizar tests por dominio/aplicación/infra/API y eliminar duplicados con fixtures reutilizables | Media |
 | **TST-01**: Tests replican lógica del consumer en lugar de invocar el módulo real | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
 | **SLD-01**: `event_publisher` inyectado pero no usado | ISP + SRP | Contratos más pequeños y menor ruido en dependencias | Segregar interfaces y dependencias por caso de uso (solo lo que consume cada uno) | Media |
@@ -559,11 +543,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 
 ## 6. Plan de Priorización y Remediación
 
-<<<<<<< HEAD
 > ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en PR #16 y migrados a `DOLORES_RESUELTOS.md`.
-=======
-> ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en Issue #15 y migrados a `DOLORES_RESUELTOS.md`.
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ### ⚡ Quick Wins (Corto Plazo — 1 Sprint)
 
