@@ -17,7 +17,7 @@ Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con *
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **3 PRs abiertas** (#6, #8, #13).
+- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **3 PRs abiertas** (#6, #8, #14).
 - Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
@@ -364,7 +364,7 @@ def _safe_close_fn(connection) -> None:
 
 #### [SCL-01] Sin paginación global y queryset completo
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #13, rama `feature/paginación-global-y-validación-http`; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14; pendiente merge a `develop`).
 
 ---
 
@@ -460,7 +460,7 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [DOC-01] Serializer sin validaciones explícitas del contrato de entrada
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #13, rama `feature/paginación-global-y-validación-http`; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14; pendiente merge a `develop`).
 
 ---
 

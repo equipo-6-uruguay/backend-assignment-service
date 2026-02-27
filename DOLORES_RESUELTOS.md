@@ -49,8 +49,8 @@ Se migraron **8 dolores** por cierre y merge de quick wins/correcciones (incluye
 | NOM-01 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
 | NOM-02 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
 | TST-02 | ✅ Resuelto | 2026-02-27 | Issue #3 cerrado + PR #4 mergeado |
-| SCL-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #13 + rama `feature/paginación-global-y-validación-http` |
-| DOC-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #13 + rama `feature/paginación-global-y-validación-http` |
+| SCL-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
+| DOC-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
 
 ---
 
@@ -60,4 +60,4 @@ Se migraron **8 dolores** por cierre y merge de quick wins/correcciones (incluye
 |---|---|---|---|
 | 2026-02-26 | CFG-01, SEC-01, SEC-02, NOM-01, NOM-02 | Issue #1 cerrado / PR #2 mergeado en `develop` | Auditoría repo |
 | 2026-02-27 | TST-02 | Issue #3 cerrado / PR #4 mergeado en `main` | Auditoría repo |
-| 2026-02-27 | SCL-01, DOC-01 | Issue #13 abierto + implementación en rama `feature/paginación-global-y-validación-http` (pendiente PR/merge a `develop`) | Auditoría repo |
+| 2026-02-27 | SCL-01, DOC-01 | PR #14 abierto (pendiente merge a `develop`) | Auditoría repo |
