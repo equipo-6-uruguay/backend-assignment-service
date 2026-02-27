@@ -227,11 +227,7 @@ def save(self, assignment: Assignment) -> Assignment:
 
 #### [ERR-02] `except Exception` genérico en publisher y adapter
 
-<<<<<<< HEAD
 ✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
-=======
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
