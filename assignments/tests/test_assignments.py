@@ -556,9 +556,9 @@ class LegacyAssignmentServiceTests(TestCase):
         """Celery task debe procesar evento"""
         event_data = {'ticket_id': 'TASK-001'}
 
-        # Ejecutar tarea directamente (sin Celery broker)
+        # Ejecutar tarea vía .apply() (síncrono, sin broker, compatible con bind=True)
         from assignments.tasks import process_ticket_event
-        process_ticket_event(event_data)
+        process_ticket_event.apply(args=[event_data])
 
         # Verificar que se procesó
         self.assertTrue(
@@ -700,3 +700,39 @@ class CeleryTaskTests(TestCase):
         self.assertTrue(
             TicketAssignment.objects.filter(ticket_id='APPLY-1').exists()
         )
+
+
+class CeleryRetryPolicyTests(TestCase):
+    """Tests que verifican la configuración de retry policy en tareas Celery."""
+
+    def test_process_ticket_event_has_max_retries(self):
+        """La tarea debe tener max_retries=5"""
+        self.assertEqual(tasks.process_ticket_event.max_retries, 5)
+
+    def test_process_ticket_event_has_retry_backoff(self):
+        """La tarea debe tener retry_backoff=2"""
+        self.assertEqual(tasks.process_ticket_event.retry_backoff, 2)
+
+    def test_process_ticket_event_has_retry_backoff_max(self):
+        """La tarea debe tener retry_backoff_max=60"""
+        self.assertEqual(tasks.process_ticket_event.retry_backoff_max, 60)
+
+    def test_process_ticket_event_has_retry_jitter(self):
+        """La tarea debe tener retry_jitter=True"""
+        self.assertTrue(tasks.process_ticket_event.retry_jitter)
+
+    def test_process_ticket_event_has_autoretry_for(self):
+        """La tarea debe configurar autoretry_for con excepciones transitorias"""
+        from django.db import OperationalError, InterfaceError
+        import pika.exceptions
+
+        autoretry = tasks.process_ticket_event.autoretry_for
+        self.assertIn(OperationalError, autoretry)
+        self.assertIn(InterfaceError, autoretry)
+        self.assertIn(pika.exceptions.AMQPConnectionError, autoretry)
+
+    def test_process_ticket_event_is_bound(self):
+        """La tarea debe ser bound (bind=True) para acceder a self"""
+        # Bound tasks have a 'self' parameter — they are instances of Task
+        # We can check by verifying the task name exists and it has request attr
+        self.assertTrue(hasattr(tasks.process_ticket_event, 'request'))

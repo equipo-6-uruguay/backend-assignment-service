@@ -20,13 +20,13 @@ Un dolor/bug se mueve desde `DOLORES.md` a este archivo **solo cuando**:
 
 ### Resultado del repositorio GitHub
 
-- Issues cerradas vinculadas a dolores: **2** (#1, #3) + **1 abierta en implementación** (#13)
+- Issues cerradas vinculadas a dolores: **2** (#1, #3) + **2 abiertas en implementación** (#13, #15)
 - Pull Requests mergeadas vinculadas: **2** (#2, #4)
 - Pull Requests abiertas relacionadas con documentación/tests: **2** (#6, #8)
 
 ### Resultado en código (`develop`)
 
-Se migraron **8 dolores** por cierre y merge de quick wins/correcciones (incluye 2 en implementación activa en rama feature):
+Se migraron **11 dolores** por cierre y merge de quick wins/correcciones (incluye 5 en implementación activa en rama feature):
 
 - `CFG-01` — credenciales RabbitMQ hardcodeadas
 - `SEC-01` — falta de fail-fast con `ALLOWED_HOSTS` vacío en producción
@@ -36,6 +36,9 @@ Se migraron **8 dolores** por cierre y merge de quick wins/correcciones (incluye
 - `TST-02` — inconsistencia de rutas API en tests vs router real
 - `SCL-01` — sin paginación global en API
 - `DOC-01` — serializer sin validaciones explícitas del contrato de entrada
+- `EDA-01` — ACK prematuro del mensaje antes de confirmar procesamiento real
+- `EDA-02` — tarea Celery sin retry/backoff/autoretry explícitos
+- `ERR-02` — `except Exception` genérico en publisher y adapter
 
 ---
 
@@ -51,6 +54,15 @@ Se migraron **8 dolores** por cierre y merge de quick wins/correcciones (incluye
 | TST-02 | ✅ Resuelto | 2026-02-27 | Issue #3 cerrado + PR #4 mergeado |
 | SCL-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
 | DOC-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
+<<<<<<< HEAD
+| EDA-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
+| EDA-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
+| ERR-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
+=======
+| EDA-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #15 |
+| EDA-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #15 |
+| ERR-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | Issue #15 |
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
@@ -61,3 +73,8 @@ Se migraron **8 dolores** por cierre y merge de quick wins/correcciones (incluye
 | 2026-02-26 | CFG-01, SEC-01, SEC-02, NOM-01, NOM-02 | Issue #1 cerrado / PR #2 mergeado en `develop` | Auditoría repo |
 | 2026-02-27 | TST-02 | Issue #3 cerrado / PR #4 mergeado en `main` | Auditoría repo |
 | 2026-02-27 | SCL-01, DOC-01 | PR #14 abierto (pendiente merge a `develop`) | Auditoría repo |
+<<<<<<< HEAD
+| 2026-02-27 | EDA-01, EDA-02, ERR-02 | PR #16 (rama `feature/resiliencia-post-procesamiento`) | Auditoría repo |
+=======
+| 2026-02-27 | EDA-01, EDA-02, ERR-02 | Issue #15 (rama `feature/resiliencia-post-procesamiento`) | Auditoría repo |
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)

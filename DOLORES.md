@@ -17,19 +17,23 @@ Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con *
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **3 PRs abiertas** (#6, #8, #14).
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01**.
+<<<<<<< HEAD
+- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #16).
+=======
+- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #15).
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
 ### Top 5 Problemas Críticos
 
 | # | Dolor | Categoría | Impacto |
 |---|---|---|---|
-| 1 | ACK prematuro antes de confirmar procesamiento | Resiliencia EDA | Pérdida de mensajes ante fallos de worker |
-| 2 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
-| 3 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
-| 4 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | Error 500 no controlado ante IDs huérfanos |
-| 5 | Tarea Celery sin retry/backoff/autoretry explícitos | Resiliencia EDA | Baja tolerancia a fallos transitorios |
+| 1 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
+| 2 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
+| 3 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | Error 500 no controlado ante IDs huérfanos |
+| 4 | Reconexión en consumer atrapa cualquier error inesperado | Manejo de Errores | Fiabilidad, deuda técnica |
+| 5 | Conexión RabbitMQ nueva por cada evento publicado | Escalabilidad | Reduce throughput del sistema de mensajería |
 
 ---
 
@@ -223,23 +227,7 @@ def save(self, assignment: Assignment) -> Assignment:
 
 #### [ERR-02] `except Exception` genérico en publisher y adapter
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `assignments/infrastructure/messaging/event_publisher.py` (L64-68), `assignments/infrastructure/messaging/event_adapter.py` (L56-62) |
-
-**Descripción:**  
-Captura amplia sin tipado específico en puntos críticos EDA dificulta diagnóstico fino y políticas de recuperación diferenciadas.
-
-**Impacto:** Mantenibilidad, resiliencia
-
-**Evidencia:**
-```python
-print(f"[ASSIGNMENT] Evento publicado: {event.to_dict()['event_type']}")
-            
-except Exception as e:
-    print(f"[ASSIGNMENT] Error publicando evento: {e}")
-    raise
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
 
 ---
 
@@ -482,50 +470,21 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [EDA-01] ACK prematuro del mensaje antes de confirmar procesamiento real
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `messaging/consumer.py` (líneas 56-67) |
-
-**Descripción:**  
-Se confirma la recepción del mensaje (`basic_ack`) después de enviar la tarea a Celery con `delay()`, no después del procesamiento exitoso. Si el worker Celery cae después del ACK, el mensaje se pierde del broker.
-
-**Impacto:** Resiliencia, riesgo de pérdida de datos, escalabilidad
-
-**Evidencia:**
-```python
-try:
-    event_data = json.loads(body)
-    process_ticket_event.delay(event_data)
-    logger.info("Event received and sent to Celery: %s", event_data)
-    ch.basic_ack(delivery_tag=method.delivery_tag)  # ← ACK antes de procesamiento real
-except Exception as e:
-    logger.error("Error processing message: %s", e)
-    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-```
+<<<<<<< HEAD
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
+=======
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
 #### [EDA-02] Tarea Celery sin retry/backoff/autoretry explícitos
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/tasks.py` (líneas 6-18) |
-
-**Descripción:**  
-`process_ticket_event` no define política de reintentos ni idempotencia. Ante errores transitorios (timeout DB, broker) se degrada silenciosamente la confiabilidad del pipeline.
-
-**Impacto:** Resiliencia, fiabilidad
-
-**Evidencia:**
-```python
-@shared_task
-def process_ticket_event(event_data: Dict[str, Any]):
-    """
-    Celery task que procesa eventos de ticket en segundo plano.
-    """
-    from messaging.handlers import handle_ticket_event
-    handle_ticket_event(event_data)
-```
+<<<<<<< HEAD
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
+=======
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
@@ -586,7 +545,11 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | **SCL-02**: Conexión RabbitMQ nueva por mensaje | SRP en infraestructura + OCP | Mejor throughput, menor latencia y menor presión de red | Introducir publisher con conexión/canal reutilizable y lifecycle controlado | Media |
 | **ERR-01/02/03**: Errores genéricos y sin control | SRP + DIP + manejo explícito de límites | Errores predecibles y reintentos sólo cuando corresponde | Definir taxonomía de excepciones (dominio/aplicación/infra) y políticas de retry por tipo | Alta |
 | **SLD-02**: `ValueError` genérico en dominio | Modelo de dominio explícito + SRP | Reglas de negocio expresivas y trazables | Crear jerarquía de `DomainException` y mapearla en capa de aplicación | Alta |
-| **EDA-01/02/03**: ACK prematuro, sin retry/backoff, DLQ inconsistente | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Confirmar ACK post-procesamiento, retries exponenciales y convención única de routing keys/DLQ | Alta |
+<<<<<<< HEAD
+| **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en PR #16) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
+=======
+| **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en Issue #15) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 | **DUP-01 + MOD-01**: Tests duplicados y archivo "god file" | SRP + separación por capa/caso de uso | Suites mantenibles, rápidas y con menor costo de cambio | Reorganizar tests por dominio/aplicación/infra/API y eliminar duplicados con fixtures reutilizables | Media |
 | **TST-01**: Tests replican lógica del consumer en lugar de invocar el módulo real | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
 | **SLD-01**: `event_publisher` inyectado pero no usado | ISP + SRP | Contratos más pequeños y menor ruido en dependencias | Segregar interfaces y dependencias por caso de uso (solo lo que consume cada uno) | Media |
@@ -595,6 +558,12 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 ---
 
 ## 6. Plan de Priorización y Remediación
+
+<<<<<<< HEAD
+> ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en PR #16 y migrados a `DOLORES_RESUELTOS.md`.
+=======
+> ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en Issue #15 y migrados a `DOLORES_RESUELTOS.md`.
+>>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ### ⚡ Quick Wins (Corto Plazo — 1 Sprint)
 
@@ -608,7 +577,6 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 |---|---|---|---|
 | ERR-01 | Agregar manejo de `DoesNotExist` en repository update | Medio | Estabilidad |
 | SLD-02 | Crear jerarquía de excepciones de dominio | Medio | Dominio expresivo |
-| EDA-02 | Agregar retry/backoff a task Celery | Medio | Resiliencia EDA |
 | DUP-01 | Consolidar tests de integración duplicados | Medio | Mantenibilidad |
 
 ### 🏗️ Estructural (Largo Plazo — 3+ Sprints)
@@ -616,7 +584,6 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | ID | Tarea | Esfuerzo | Beneficio |
 |---|---|---|---|
 | CPL-01 | Implementar inversión de dependencias en ViewSet | Alto | Desacoplamiento total |
-| EDA-01 | Rediseñar flujo ACK post-procesamiento | Alto | Cero pérdida de mensajes |
 | MOD-01 | Reorganizar tests por capa (dominio/app/infra/API) | Alto | Suite mantenible |
 | SCL-02 | Publisher con conexión RabbitMQ reutilizable | Alto | Throughput optimizado |
 | CFG-02 | Separar entrypoints Docker (web, worker, migrate) | Alto | Operabilidad |
