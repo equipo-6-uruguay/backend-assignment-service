@@ -1,0 +1,40 @@
+name: PR Checklist
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+
+jobs:
+  validate-checklist:
+    name: Validate PR checklist
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Validate checklist is complete
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || '';
+
+            const allItems = body.match(/- \[(?: |x|X)\] .+/g) || [];
+            const uncheckedItems = body.match(/- \[ \] .+/g) || [];
+
+            if (allItems.length === 0) {
+              core.setFailed('El PR debe incluir checklist en la descripción (líneas con - [ ] o - [x]).');
+              return;
+            }
+
+            if (uncheckedItems.length > 0) {
+              core.setFailed(
+                `Hay ${uncheckedItems.length} ítem(s) sin completar en el checklist del PR. ` +
+                'Completa todos los checks antes de mergear.'
+              );
+              return;
+            }
+
+            core.info('Checklist completo ✅');

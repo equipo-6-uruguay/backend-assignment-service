@@ -13,6 +13,7 @@ from .infrastructure.messaging.event_publisher import RabbitMQEventPublisher
 from .application.use_cases.create_assignment import CreateAssignment
 from .application.use_cases.reassign_ticket import ReassignTicket
 from .application.use_cases.update_assigned_user import UpdateAssignedUser
+from .domain.exceptions import DomainException, AssignmentNotFound
 
 
 class TicketAssignmentViewSet(viewsets.ModelViewSet):
@@ -60,7 +61,12 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
                 response_serializer.data,
                 status=status.HTTP_201_CREATED
             )
-        except ValueError as e:
+        except AssignmentNotFound as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -96,7 +102,12 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
-        except ValueError as e:
+        except AssignmentNotFound as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -125,7 +136,12 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
-        except ValueError as e:
+        except AssignmentNotFound as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
