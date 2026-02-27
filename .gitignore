@@ -48,3 +48,16 @@ media/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Markdown policy (whitelist) ---
+*.md
+!/README.md
+!/ARCHITECTURE.md
+!/GHERKIN_MATRIX.md
+!/DOLORES.md
+!/DOLORES_RESUELTOS.md
+!/TEST_PLAN_V3.md
+!/USERSTORIES Y CRITERIOS DE ACEPTACION.md
+!/.github/copilot-instructions.md
+!/.github/agents/*.md
+!/.github/instructions/*.md
