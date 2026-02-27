@@ -18,18 +18,41 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
+from assessment_service.container import (
+    AssignmentContainer,
+    get_assignment_container,
+    reset_container,
+)
 
 from assignments.models import TicketAssignment
 from assignments import tasks
 from messaging.handlers import handle_ticket_event
 
 # Imports de la arquitectura DDD
+from assignments.application.event_publisher import EventPublisher
 from assignments.domain.entities import Assignment
 from assignments.domain.events import AssignmentCreated, AssignmentReassigned
+from assignments.domain.repository import AssignmentRepository
 from assignments.infrastructure.repository import DjangoAssignmentRepository
 from assignments.infrastructure.messaging.event_adapter import TicketEventAdapter
+from assignments.application.use_cases.change_assignment_priority import ChangeAssignmentPriority
 from assignments.application.use_cases.create_assignment import CreateAssignment
 from assignments.application.use_cases.reassign_ticket import ReassignTicket
+from assignments.application.use_cases.update_assigned_user import UpdateAssignedUser
+
+
+def build_test_container(mock_publisher=None) -> AssignmentContainer:
+    """Construye un container de pruebas con repository real y publisher mock."""
+    repository = DjangoAssignmentRepository()
+    event_publisher = mock_publisher or Mock()
+    return AssignmentContainer(
+        repository=repository,
+        event_publisher=event_publisher,
+        create_assignment=CreateAssignment(repository, event_publisher),
+        reassign_ticket=ReassignTicket(repository, event_publisher),
+        update_assigned_user=UpdateAssignedUser(repository, event_publisher),
+        change_assignment_priority=ChangeAssignmentPriority(repository, event_publisher),
+    )
 
 
 # ============================================================================
@@ -537,9 +560,10 @@ class AssignmentAPITests(TestCase):
 class LegacyAssignmentServiceTests(TestCase):
     """Tests del servicio (compatibilidad con versión anterior)"""
 
-    @patch('messaging.handlers.RabbitMQEventPublisher')
-    def test_handle_ticket_event_creates_assignment(self, mock_publisher):
+    @patch('messaging.handlers.get_assignment_container')
+    def test_handle_ticket_event_creates_assignment(self, mock_get_container):
         """handle_ticket_event debe crear asignación"""
+        mock_get_container.return_value = build_test_container(Mock())
         event_data = {
             'event_type': 'ticket.created',
             'ticket_id': 'LEGACY-001'
@@ -551,9 +575,10 @@ class LegacyAssignmentServiceTests(TestCase):
         self.assertIn(assignment.priority, ["high", "medium", "low", "unassigned"])
         self.assertIsNotNone(assignment.assigned_at)
 
-    @patch('messaging.handlers.RabbitMQEventPublisher')
-    def test_process_ticket_task_calls_handler(self, mock_publisher):
+    @patch('messaging.handlers.get_assignment_container')
+    def test_process_ticket_task_calls_handler(self, mock_get_container):
         """Celery task debe procesar evento"""
+        mock_get_container.return_value = build_test_container(Mock())
         event_data = {'ticket_id': 'TASK-001'}
 
         # Ejecutar tarea vía .apply() (síncrono, sin broker, compatible con bind=True)
@@ -692,9 +717,10 @@ class TicketAssignmentModelTests(TestCase):
 class CeleryTaskTests(TestCase):
     """Tests de tareas Celery (ejecución síncrona sin broker)"""
 
-    @patch('messaging.handlers.RabbitMQEventPublisher')
-    def test_process_ticket_event_apply_runs_synchronously(self, mock_publisher):
+    @patch('messaging.handlers.get_assignment_container')
+    def test_process_ticket_event_apply_runs_synchronously(self, mock_get_container):
         """process_ticket_event.apply ejecuta la tarea sin broker"""
+        mock_get_container.return_value = build_test_container(Mock())
         event_data = {'ticket_id': 'APPLY-1', 'event_type': 'ticket.created'}
         tasks.process_ticket_event.apply(args=[event_data])
         self.assertTrue(
@@ -736,3 +762,33 @@ class CeleryRetryPolicyTests(TestCase):
         # Bound tasks have a 'self' parameter — they are instances of Task
         # We can check by verifying the task name exists and it has request attr
         self.assertTrue(hasattr(tasks.process_ticket_event, 'request'))
+
+
+class ContainerTests(TestCase):
+    """Tests del composition root de assignments."""
+
+    def tearDown(self):
+        reset_container()
+
+    def test_get_assignment_container_returns_singleton(self):
+        first = get_assignment_container()
+        second = get_assignment_container()
+        self.assertIs(first, second)
+
+    def test_reset_container_clears_singleton(self):
+        first = get_assignment_container()
+        reset_container()
+        second = get_assignment_container()
+        self.assertIsNot(first, second)
+
+    def test_container_has_all_use_cases(self):
+        container = get_assignment_container()
+        self.assertTrue(hasattr(container, 'create_assignment'))
+        self.assertTrue(hasattr(container, 'reassign_ticket'))
+        self.assertTrue(hasattr(container, 'update_assigned_user'))
+        self.assertTrue(hasattr(container, 'change_assignment_priority'))
+
+    def test_container_uses_correct_interfaces(self):
+        container = get_assignment_container()
+        self.assertIsInstance(container.repository, AssignmentRepository)
+        self.assertIsInstance(container.event_publisher, EventPublisher)

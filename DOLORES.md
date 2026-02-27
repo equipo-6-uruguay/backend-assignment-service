@@ -17,12 +17,8 @@ Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con *
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-<<<<<<< HEAD
 - Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #16).
-=======
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #15).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02**.
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02, CPL-01, CPL-02**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
 ### Top 5 Problemas Críticos
@@ -117,56 +113,13 @@ Archivos analizados durante esta auditoría:
 
 #### [CPL-01] ViewSet acoplado a infraestructura concreta (sin inversión de dependencias)
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/views.py` (líneas 8-34) |
-
-**Descripción:**  
-La capa de presentación instancia directamente `DjangoAssignmentRepository` y `RabbitMQEventPublisher`, violando el Principio de Inversión de Dependencias (DIP). Esto impide sustituir adaptadores para testing o por cambio de tecnología sin modificar la vista.
-
-**Impacto:** Mantenibilidad, deuda técnica, testabilidad
-
-**Evidencia:**
-```python
-from .infrastructure.repository import DjangoAssignmentRepository
-from .infrastructure.messaging.event_publisher import RabbitMQEventPublisher
-...
-class TicketAssignmentViewSet(viewsets.ModelViewSet):
-    queryset = TicketAssignment.objects.all().order_by('-assigned_at')
-    serializer_class = TicketAssignmentSerializer
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.repository = DjangoAssignmentRepository()
-        self.event_publisher = RabbitMQEventPublisher()
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #12, rama `feature/composition-root-di`).
 
 ---
 
 #### [CPL-02] Handler de mensajería crea dependencias concretas por evento
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `messaging/handlers.py` (líneas 16-30) |
-
-**Descripción:**  
-`handle_ticket_event` instancia repositorio y publisher en cada invocación. No hay inyección de dependencias ni factory de ciclo de vida, incrementando acoplamiento y costo por mensaje.
-
-**Impacto:** Mantenibilidad, escalabilidad
-
-**Evidencia:**
-```python
-repository = DjangoAssignmentRepository()
-event_publisher = RabbitMQEventPublisher()
-adapter = TicketEventAdapter(repository, event_publisher)
-
-event_type = event_data.get('event_type', 'ticket.created')
-
-if event_type == 'ticket.created':
-    adapter.handle_ticket_created(event_data)
-elif event_type == 'ticket.priority_changed':
-    adapter.handle_ticket_priority_changed(event_data)
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #12, rama `feature/composition-root-di`).
 
 ---
 
@@ -470,21 +423,13 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [EDA-01] ACK prematuro del mensaje antes de confirmar procesamiento real
 
-<<<<<<< HEAD
 ✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
-=======
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
 #### [EDA-02] Tarea Celery sin retry/backoff/autoretry explícitos
 
-<<<<<<< HEAD
 ✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
-=======
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #15; pendiente merge a `develop`).
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ---
 
@@ -545,11 +490,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | **SCL-02**: Conexión RabbitMQ nueva por mensaje | SRP en infraestructura + OCP | Mejor throughput, menor latencia y menor presión de red | Introducir publisher con conexión/canal reutilizable y lifecycle controlado | Media |
 | **ERR-01/02/03**: Errores genéricos y sin control | SRP + DIP + manejo explícito de límites | Errores predecibles y reintentos sólo cuando corresponde | Definir taxonomía de excepciones (dominio/aplicación/infra) y políticas de retry por tipo | Alta |
 | **SLD-02**: `ValueError` genérico en dominio | Modelo de dominio explícito + SRP | Reglas de negocio expresivas y trazables | Crear jerarquía de `DomainException` y mapearla en capa de aplicación | Alta |
-<<<<<<< HEAD
 | **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en PR #16) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
-=======
-| **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en Issue #15) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 | **DUP-01 + MOD-01**: Tests duplicados y archivo "god file" | SRP + separación por capa/caso de uso | Suites mantenibles, rápidas y con menor costo de cambio | Reorganizar tests por dominio/aplicación/infra/API y eliminar duplicados con fixtures reutilizables | Media |
 | **TST-01**: Tests replican lógica del consumer en lugar de invocar el módulo real | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
 | **SLD-01**: `event_publisher` inyectado pero no usado | ISP + SRP | Contratos más pequeños y menor ruido en dependencias | Segregar interfaces y dependencias por caso de uso (solo lo que consume cada uno) | Media |
@@ -559,11 +500,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 
 ## 6. Plan de Priorización y Remediación
 
-<<<<<<< HEAD
 > ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en PR #16 y migrados a `DOLORES_RESUELTOS.md`.
-=======
-> ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en Issue #15 y migrados a `DOLORES_RESUELTOS.md`.
->>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
 
 ### ⚡ Quick Wins (Corto Plazo — 1 Sprint)
 
