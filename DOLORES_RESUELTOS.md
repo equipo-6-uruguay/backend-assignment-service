@@ -16,22 +16,24 @@ Un dolor/bug se mueve desde `DOLORES.md` a este archivo **solo cuando**:
 
 ---
 
-## 2. Revisión actual (2026-02-26)
+## 2. Revisión actual (2026-02-27)
 
 ### Resultado del repositorio GitHub
 
-- Issues cerradas: **1** (#1)
-- Pull Requests cerradas: **1** (#2, mergeado)
+- Issues cerradas vinculadas a dolores: **2** (#1, #3)
+- Pull Requests mergeadas vinculadas: **2** (#2, #4)
+- Pull Requests abiertas relacionadas con documentación/tests: **2** (#6, #8)
 
 ### Resultado en código (`develop`)
 
-Se migraron **5 dolores** por cierre y merge de quick wins:
+Se migraron **6 dolores** por cierre y merge de quick wins/correcciones:
 
 - `CFG-01` — credenciales RabbitMQ hardcodeadas
 - `SEC-01` — falta de fail-fast con `ALLOWED_HOSTS` vacío en producción
 - `SEC-02` — fallback de CSRF no condicionado por entorno
 - `NOM-01` — typo en docstring ("autoridad" → "prioridad")
 - `NOM-02` — import muerto (`random`)
+- `TST-02` — inconsistencia de rutas API en tests vs router real
 
 ---
 
@@ -44,6 +46,7 @@ Se migraron **5 dolores** por cierre y merge de quick wins:
 | SEC-02 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
 | NOM-01 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
 | NOM-02 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
+| TST-02 | ✅ Resuelto | 2026-02-27 | Issue #3 cerrado + PR #4 mergeado |
 
 ---
 
@@ -52,3 +55,4 @@ Se migraron **5 dolores** por cierre y merge de quick wins:
 | Fecha | IDs movidos | Evidencia | Responsable |
 |---|---|---|---|
 | 2026-02-26 | CFG-01, SEC-01, SEC-02, NOM-01, NOM-02 | Issue #1 cerrado / PR #2 mergeado en `develop` | Auditoría repo |
+| 2026-02-27 | TST-02 | Issue #3 cerrado / PR #4 mergeado en `main` | Auditoría repo |

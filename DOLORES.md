@@ -11,21 +11,22 @@
 
 Este documento cataloga de forma exhaustiva los "dolores" (problemas técnicos, arquitectónicos y de calidad) identificados en el código base actual del monolito heredado. El objetivo es visibilizar la deuda técnica acumulada para priorizar la refactorización hacia una **Clean Architecture** (Robert C. Martin).
 
-Se identificaron **13+ hallazgos activos** distribuidos en 10 categorías, con **6 de severidad alta** y **7 de severidad media**.
+Se identificaron **12+ hallazgos activos** distribuidos en 10 categorías, con **5 de severidad alta** y **7 de severidad media**.
 
-### Estado de trazabilidad (2026-02-26)
+### Estado de trazabilidad (2026-02-27)
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-- Revisión de GitHub al 2026-02-26: **1 Issue cerrada** (#1) y **1 PR cerrado/mergeado** (#2).
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02**.
+- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **2 PRs abiertas** (#6, #8).
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02**.
+- Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
 ### Top 5 Problemas Críticos
 
 | # | Dolor | Categoría | Impacto |
 |---|---|---|---|
 | 1 | ACK prematuro antes de confirmar procesamiento | Resiliencia EDA | Pérdida de mensajes ante fallos de worker |
-| 2 | URLs de tests no coinciden con router real | Cobertura de Pruebas | Falsos positivos/negativos en aceptación |
+| 2 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
 | 3 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
 | 4 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | Error 500 no controlado ante IDs huérfanos |
 | 5 | Sin paginación global en API | Escalabilidad | Degradación de rendimiento con volúmenes altos |
@@ -167,14 +168,14 @@ elif event_type == 'ticket.priority_changed':
 
 ### 4.2. Duplicación de Código
 
-#### [DUP-01] Tests de integración E2E duplicados en dos archivos
+#### [DUP-01] Tests de integración E2E duplicados en múltiples archivos
 
 | **Severidad** | **Ubicación** |
 |---|---|
-| 🟡 Media | `assignments/tests.py` (L541-556), `assignments/test_integration.py` (L12-23) |
+| 🟡 Media | `assignments/tests.py`, `assignments/test_integration.py`, `assignments/tests/test_assignments.py` |
 
 **Descripción:**  
-Existe `AssignmentIntegrationTests` en dos módulos con flujo casi idéntico (RabbitMQ→consumer→DB), generando mantenimiento duplicado y riesgo de divergencia.
+Existe `AssignmentIntegrationTests` en múltiples módulos con flujo casi idéntico (RabbitMQ→consumer→DB), generando mantenimiento duplicado y riesgo de divergencia.
 
 **Impacto:** Deuda técnica, mantenibilidad
 
@@ -270,27 +271,28 @@ except Exception as exc:
 
 ### 4.4. Falta de Modularidad
 
-#### [MOD-01] Archivo de tests "god file" mezclando capas y estilos
+#### [MOD-01] Archivo de tests "god file" mezclando capas
 
 | **Severidad** | **Ubicación** |
 |---|---|
-| 🔴 Alta | `assignments/tests.py` (líneas 627-676) |
+| 🔴 Alta | `assignments/tests.py` |
 
 **Descripción:**  
-Un único archivo concentra pruebas de dominio, aplicación, infraestructura, API, integración y legacy. Además contiene fragmentos de código corruptos/inconsistentes al final del archivo.
+Un único archivo concentra pruebas de dominio, aplicación, infraestructura, API, integración y legacy. Aunque se corrigieron errores de formato en PR #4, la concentración de responsabilidades sigue siendo una deuda estructural.
 
 **Impacto:** Mantenibilidad, fiabilidad de pruebas
 
 **Evidencia:**
 ```python
-except Exception as e:
-    self.skipTest(f"RabbitMQ no disponible: {e}")
-	with self.assertRaises(Exception):
-		handle_ticket_created(None)
-...
-	def test_process_ticket_apply_runs_task_synchronously(self):
-		ticket_id = "APPLY-1"
-		tasks.process_ticket.apply(args=[ticket_id])
+# tests.py concentra API + legacy + integración + celery en un mismo módulo
+class AssignmentAPITests(APITestCase):
+    ...
+
+class LegacyAssignmentServiceTests(TestCase):
+    ...
+
+class AssignmentIntegrationTests(TestCase):
+    ...
 ```
 
 ---
@@ -354,26 +356,7 @@ def _safe_close_fn(connection) -> None:
 
 #### [TST-02] Inconsistencia de rutas API en tests vs router real
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assessment_service/urls.py` (L18-23), `assignments/tests.py` (L458-466) |
-
-**Descripción:**  
-La URL real está registrada bajo `/api/` en el router, pero los tests llaman a `/assignments/`. Esto introduce falsos positivos/negativos según la configuración del entorno.
-
-**Impacto:** Mantenibilidad, fiabilidad de pruebas
-
-**Evidencia:**
-```python
-# urls.py (router real)
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include('assignments.urls')),
-]
-
-# tests.py (ruta usada en tests)
-response = self.client.get('/assignments/')
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #3 / PR #4, mergeado).
 
 ---
 
@@ -635,7 +618,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | **SLD-02**: `ValueError` genérico en dominio | Modelo de dominio explícito + SRP | Reglas de negocio expresivas y trazables | Crear jerarquía de `DomainException` y mapearla en capa de aplicación | Alta |
 | **EDA-01/02/03**: ACK prematuro, sin retry/backoff, DLQ inconsistente | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Confirmar ACK post-procesamiento, retries exponenciales y convención única de routing keys/DLQ | Alta |
 | **DUP-01 + MOD-01**: Tests duplicados y archivo "god file" | SRP + separación por capa/caso de uso | Suites mantenibles, rápidas y con menor costo de cambio | Reorganizar tests por dominio/aplicación/infra/API y eliminar duplicados con fixtures reutilizables | Media |
-| **TST-01/02**: Tests replican lógica y URLs inconsistentes | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
+| **TST-01**: Tests replican lógica del consumer en lugar de invocar el módulo real | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
 | **SLD-01**: `event_publisher` inyectado pero no usado | ISP + SRP | Contratos más pequeños y menor ruido en dependencias | Segregar interfaces y dependencias por caso de uso (solo lo que consume cada uno) | Media |
 | **DOC-01**: Serializer sin validaciones de contrato | Interface Adapters: validación en borde | Entradas más seguras y consistentes antes de llegar al dominio | Añadir validadores explícitos por campo y mensajes de error de contrato | Media |
 | **SCL-01**: Sin paginación por defecto | OCP + separación de concerns en interfaz | Escalabilidad de API y menor carga por request | Definir política global de paginación en capa de presentación (DRF settings) | Media |
@@ -649,7 +632,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 
 | ID | Tarea | Esfuerzo | Beneficio |
 |---|---|---|---|
-| TST-02 | Alinear URLs de tests con router real (`/api/`) | Bajo | Fiabilidad de pruebas |
+| — | Sin quick win nuevo pendiente tras cierre de `TST-02` | — | — |
 
 ### 🛠️ Mediano Plazo (Táctico — 2-3 Sprints)
 
