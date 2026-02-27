@@ -12,6 +12,7 @@
 Este documento cataloga de forma exhaustiva los "dolores" (problemas técnicos, arquitectónicos y de calidad) identificados en el código base actual del monolito heredado. El objetivo es visibilizar la deuda técnica acumulada para priorizar la refactorización hacia una **Clean Architecture** (Robert C. Martin).
 
 Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con **4 de severidad alta** y **6 de severidad media**.
+Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con **4 de severidad alta** y **6 de severidad media**.
 
 ### Estado de trazabilidad (2026-02-27)
 
@@ -20,9 +21,8 @@ Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con *
 <<<<<<< HEAD
 - Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #16).
 =======
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #15).
 >>>>>>> 25b53bf (feat: Enhance event processing resilience and logging in messaging components)
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02**.
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02, CPL-01, CPL-02**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
 ### Top 5 Problemas Críticos
@@ -117,56 +117,13 @@ Archivos analizados durante esta auditoría:
 
 #### [CPL-01] ViewSet acoplado a infraestructura concreta (sin inversión de dependencias)
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/views.py` (líneas 8-34) |
-
-**Descripción:**  
-La capa de presentación instancia directamente `DjangoAssignmentRepository` y `RabbitMQEventPublisher`, violando el Principio de Inversión de Dependencias (DIP). Esto impide sustituir adaptadores para testing o por cambio de tecnología sin modificar la vista.
-
-**Impacto:** Mantenibilidad, deuda técnica, testabilidad
-
-**Evidencia:**
-```python
-from .infrastructure.repository import DjangoAssignmentRepository
-from .infrastructure.messaging.event_publisher import RabbitMQEventPublisher
-...
-class TicketAssignmentViewSet(viewsets.ModelViewSet):
-    queryset = TicketAssignment.objects.all().order_by('-assigned_at')
-    serializer_class = TicketAssignmentSerializer
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.repository = DjangoAssignmentRepository()
-        self.event_publisher = RabbitMQEventPublisher()
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #<PR_NUMBER>, rama `feature/composition-root-di`).
 
 ---
 
 #### [CPL-02] Handler de mensajería crea dependencias concretas por evento
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `messaging/handlers.py` (líneas 16-30) |
-
-**Descripción:**  
-`handle_ticket_event` instancia repositorio y publisher en cada invocación. No hay inyección de dependencias ni factory de ciclo de vida, incrementando acoplamiento y costo por mensaje.
-
-**Impacto:** Mantenibilidad, escalabilidad
-
-**Evidencia:**
-```python
-repository = DjangoAssignmentRepository()
-event_publisher = RabbitMQEventPublisher()
-adapter = TicketEventAdapter(repository, event_publisher)
-
-event_type = event_data.get('event_type', 'ticket.created')
-
-if event_type == 'ticket.created':
-    adapter.handle_ticket_created(event_data)
-elif event_type == 'ticket.priority_changed':
-    adapter.handle_ticket_priority_changed(event_data)
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #<PR_NUMBER>, rama `feature/composition-root-di`).
 
 ---
 
