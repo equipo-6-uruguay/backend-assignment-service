@@ -27,7 +27,7 @@ from messaging.handlers import handle_ticket_event
 from assignments.domain.entities import Assignment
 from assignments.domain.events import AssignmentCreated, AssignmentReassigned
 from assignments.domain.exceptions import (
-    DomainException, AssignmentNotFound, InvalidPriority, InvalidTicketId
+    AssignmentNotFound, InvalidPriority, InvalidTicketId
 )
 from assignments.infrastructure.repository import DjangoAssignmentRepository
 from assignments.infrastructure.messaging.event_adapter import TicketEventAdapter
