@@ -26,6 +26,9 @@ from messaging.handlers import handle_ticket_event
 # Imports de la arquitectura DDD
 from assignments.domain.entities import Assignment
 from assignments.domain.events import AssignmentCreated, AssignmentReassigned
+from assignments.domain.exceptions import (
+    DomainException, AssignmentNotFound, InvalidPriority, InvalidTicketId
+)
 from assignments.infrastructure.repository import DjangoAssignmentRepository
 from assignments.infrastructure.messaging.event_adapter import TicketEventAdapter
 from assignments.application.use_cases.create_assignment import CreateAssignment
@@ -52,7 +55,7 @@ class AssignmentEntityTests(TestCase):
 
     def test_assignment_validates_empty_ticket_id(self):
         """ticket_id vacío debe lanzar ValueError"""
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(InvalidTicketId) as context:
             Assignment(
                 ticket_id="",
                 priority="high",
@@ -62,7 +65,7 @@ class AssignmentEntityTests(TestCase):
 
     def test_assignment_validates_whitespace_ticket_id(self):
         """ticket_id con solo espacios debe lanzar ValueError"""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidTicketId):
             Assignment(
                 ticket_id="   ",
                 priority="high",
@@ -71,7 +74,7 @@ class AssignmentEntityTests(TestCase):
 
     def test_assignment_validates_invalid_priority(self):
         """Prioridad inválida debe lanzar ValueError"""
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(InvalidPriority) as context:
             Assignment(
                 ticket_id="TEST-001",
                 priority="urgent",  # No es válida
@@ -107,7 +110,7 @@ class AssignmentEntityTests(TestCase):
             priority="low",
             assigned_at=datetime.utcnow()
         )
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidPriority):
             assignment.change_priority("critical")
 
 
@@ -260,6 +263,17 @@ class DjangoAssignmentRepositoryTests(TestCase):
         deleted = self.repository.delete(99999)
         self.assertFalse(deleted)
 
+    def test_save_nonexistent_id_raises_not_found(self):
+        """Guardar con ID inexistente debe lanzar AssignmentNotFound"""
+        assignment = Assignment(
+            id=99999,
+            ticket_id="REPO-GHOST",
+            priority="high",
+            assigned_at=datetime.utcnow()
+        )
+        with self.assertRaises(AssignmentNotFound):
+            self.repository.save(assignment)
+
 
 # ============================================================================
 # TESTS DE APLICACIÓN (Use Cases)
@@ -313,7 +327,7 @@ class CreateAssignmentUseCaseTests(TestCase):
 
     def test_create_assignment_invalid_priority(self):
         """Crear con prioridad inválida debe lanzar ValueError"""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidPriority):
             self.use_case.execute(
                 ticket_id="UC-INVALID",
                 priority="critical"
@@ -354,7 +368,7 @@ class ReassignTicketUseCaseTests(TestCase):
 
     def test_reassign_ticket_not_found(self):
         """Reasignar ticket inexistente debe lanzar ValueError"""
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(AssignmentNotFound) as context:
             self.use_case.execute(
                 ticket_id="NONEXISTENT",
                 new_priority="high"
@@ -375,7 +389,7 @@ class ReassignTicketUseCaseTests(TestCase):
 
     def test_reassign_ticket_invalid_priority(self):
         """Reasignar a prioridad inválida debe lanzar ValueError"""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidPriority):
             self.use_case.execute(
                 ticket_id="UC-REASSIGN-001",
                 new_priority="urgent"
@@ -457,6 +471,16 @@ class AssignmentAPITests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_create_assignment_invalid_priority_returns_400(self):
+        """POST con prioridad inválida debe retornar 400 (DomainException)"""
+        response = self.client.post(
+            '/api/assignments/',
+            {'ticket_id': 'API-DOMAIN-ERR', 'priority': 'ultra'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
     def test_list_assignments(self):
         """GET /api/assignments/ debe listar asignaciones"""
         # Crear algunas asignaciones
@@ -504,7 +528,7 @@ class AssignmentAPITests(TestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 # ============================================================================

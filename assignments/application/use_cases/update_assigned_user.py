@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from assignments.domain.entities import Assignment
+from assignments.domain.exceptions import AssignmentNotFound
 from assignments.domain.repository import AssignmentRepository
 from assignments.application.event_publisher import EventPublisher
 
@@ -43,7 +44,7 @@ class UpdateAssignedUser:
         assignment = self.repository.find_by_id(assignment_id)
         
         if not assignment:
-            raise ValueError(f"No existe asignación con ID {assignment_id}")
+            raise AssignmentNotFound(f"No existe asignación con ID {assignment_id}")
         
         # Actualizar el usuario asignado
         assignment.assigned_to = assigned_to

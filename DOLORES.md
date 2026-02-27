@@ -18,7 +18,7 @@ Se identificaron **12+ hallazgos activos** distribuidos en 10 categorías, con *
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
 - Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **2 PRs abiertas** (#6, #8).
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02**.
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, ERR-01, SLD-02**.
 - Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
 
 ### Top 5 Problemas Críticos
@@ -28,7 +28,7 @@ Se identificaron **12+ hallazgos activos** distribuidos en 10 categorías, con *
 | 1 | ACK prematuro antes de confirmar procesamiento | Resiliencia EDA | Pérdida de mensajes ante fallos de worker |
 | 2 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
 | 3 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
-| 4 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | Error 500 no controlado ante IDs huérfanos |
+| 4 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | ✅ Resuelto |
 | 5 | Sin paginación global en API | Escalabilidad | Degradación de rendimiento con volúmenes altos |
 
 ---
@@ -197,27 +197,7 @@ class AssignmentIntegrationTests(TestCase):
 
 #### [ERR-01] Repository update sin control de `DoesNotExist`
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/infrastructure/repository.py` (líneas 19-31) |
-
-**Descripción:**  
-En `save()`, la rama de actualización hace `get(id=assignment.id)` sin manejo de excepción. Un ID huérfano provoca un error 500 no controlado en vez de un error de dominio.
-
-**Impacto:** Mantenibilidad, fiabilidad
-
-**Evidencia:**
-```python
-def save(self, assignment: Assignment) -> Assignment:
-    if assignment.id:
-        model = TicketAssignmentModel.objects.get(id=assignment.id)
-        model.priority = assignment.priority
-        model.assigned_to = assignment.assigned_to
-        model.save()
-    else:
-        model = TicketAssignmentModel.objects.create(
-            ticket_id=assignment.ticket_id,
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #9, rama `main`).
 
 ---
 
@@ -433,26 +413,7 @@ return updated_assignment  # ← Sin publicación de evento
 
 #### [SLD-02] Dominio usa `ValueError` genérico en lugar de excepciones de dominio
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `assignments/domain/entities.py` (líneas 24-52) |
-
-**Descripción:**  
-La entidad no define una jerarquía de excepciones específica del dominio. Usa `ValueError` genérico, lo que complica el mapeo semántico a respuestas API y dificulta el manejo diferenciado de errores.
-
-**Impacto:** Mantenibilidad, deuda técnica
-
-**Evidencia:**
-```python
-if not self.ticket_id or not self.ticket_id.strip():
-    raise ValueError("ticket_id es requerido y no puede estar vacío")
-
-if self.priority not in self.VALID_PRIORITIES:
-    raise ValueError(
-        f"priority debe ser uno de {self.VALID_PRIORITIES}, "
-        f"recibido: {self.priority}"
-    )
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #9, rama `main`).
 
 ---
 
