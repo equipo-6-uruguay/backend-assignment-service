@@ -48,3 +48,16 @@ media/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Local docs ---
+*.md
+!/README.md
+!/.github/agents/iris.agent.md
+!/.github/agents/shannahan.agent.md
+!/.github/instructions/copilot-instructions.md
+!/DOLORES.md
+!/DOLORES_RESUELTOS.md
+!/ARCHITECTURE.md
+!/GHERKIN_MATRIX.md
+!/TEST_PLAN_V3.md
+!/USERSTORIES Y CRITERIOS DE ACEPTACION.md

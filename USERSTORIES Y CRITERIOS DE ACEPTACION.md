@@ -60,7 +60,7 @@ Feature: Crear asignación de ticket vía API
   Scenario: Creación exitosa de asignación con datos válidos
     Given el sistema está operativo y la base de datos accesible
     And no existe una asignación previa para el ticket "TK-100"
-    When envío una petición POST a "/assignments/" con body {"ticket_id": "TK-100", "priority": "high"}
+    When envío una petición POST a "/api/assignments/" con body {"ticket_id": "TK-100", "priority": "high"}
     Then el sistema responde con código de estado 201 Created
     And el cuerpo de respuesta contiene el campo "id" con un valor numérico
     And el campo "ticket_id" es "TK-100"
@@ -69,20 +69,20 @@ Feature: Crear asignación de ticket vía API
 
   Scenario: Creación idempotente cuando ya existe asignación para el ticket
     Given existe una asignación para el ticket "TK-100" con prioridad "high"
-    When envío una petición POST a "/assignments/" con body {"ticket_id": "TK-100", "priority": "medium"}
+    When envío una petición POST a "/api/assignments/" con body {"ticket_id": "TK-100", "priority": "medium"}
     Then el sistema responde con código de estado 201 Created
     And la asignación retornada mantiene la prioridad original "high"
     And no se crea un registro duplicado en la base de datos
 
   Scenario: Rechazo por prioridad inválida
     Given el sistema está operativo
-    When envío una petición POST a "/assignments/" con body {"ticket_id": "TK-101", "priority": "critical"}
+    When envío una petición POST a "/api/assignments/" con body {"ticket_id": "TK-101", "priority": "critical"}
     Then el sistema responde con código de estado 400 Bad Request
     And el cuerpo contiene un mensaje de error indicando las prioridades válidas
 
   Scenario: Rechazo por ticket_id vacío
     Given el sistema está operativo
-    When envío una petición POST a "/assignments/" con body {"ticket_id": "", "priority": "low"}
+    When envío una petición POST a "/api/assignments/" con body {"ticket_id": "", "priority": "low"}
     Then el sistema responde con código de estado 400 Bad Request
     And el cuerpo contiene un mensaje de error indicando que "ticket_id" es requerido
 ```
@@ -124,20 +124,20 @@ Feature: Consultar lista de asignaciones
 
   Scenario: Listado exitoso con asignaciones existentes
     Given existen 3 asignaciones registradas en el sistema
-    When envío una petición GET a "/assignments/"
+    When envío una petición GET a "/api/assignments/"
     Then el sistema responde con código de estado 200 OK
     And el cuerpo contiene un arreglo con 3 elementos
     And cada elemento tiene los campos "id", "ticket_id", "priority", "assigned_at" y "assigned_to"
 
   Scenario: Listado vacío cuando no hay asignaciones
     Given no existen asignaciones registradas en el sistema
-    When envío una petición GET a "/assignments/"
+    When envío una petición GET a "/api/assignments/"
     Then el sistema responde con código de estado 200 OK
     And el cuerpo contiene un arreglo vacío
 
   Scenario: Las asignaciones se ordenan por fecha más reciente primero
     Given existen asignaciones creadas en orden: "TK-001" (hace 2 horas), "TK-002" (hace 1 hora), "TK-003" (hace 5 minutos)
-    When envío una petición GET a "/assignments/"
+    When envío una petición GET a "/api/assignments/"
     Then el primer elemento del arreglo corresponde al ticket "TK-003"
     And el último elemento corresponde al ticket "TK-001"
 ```
@@ -179,19 +179,19 @@ Feature: Consultar asignación por ID
 
   Scenario: Consulta exitosa de asignación existente
     Given existe una asignación con ID 1 para el ticket "TK-200" con prioridad "medium"
-    When envío una petición GET a "/assignments/1/"
+    When envío una petición GET a "/api/assignments/1/"
     Then el sistema responde con código de estado 200 OK
     And el cuerpo contiene "ticket_id" igual a "TK-200"
     And el cuerpo contiene "priority" igual a "medium"
 
   Scenario: Consulta de asignación inexistente
     Given no existe una asignación con ID 999
-    When envío una petición GET a "/assignments/999/"
+    When envío una petición GET a "/api/assignments/999/"
     Then el sistema responde con código de estado 404 Not Found
 
   Scenario: Consulta incluye campo assigned_to cuando está asignado a un usuario
     Given existe una asignación con ID 2 asignada al usuario "agent-42"
-    When envío una petición GET a "/assignments/2/"
+    When envío una petición GET a "/api/assignments/2/"
     Then el sistema responde con código de estado 200 OK
     And el campo "assigned_to" es "agent-42"
 ```
@@ -233,27 +233,27 @@ Feature: Reasignar prioridad de ticket
 
   Scenario: Reasignación exitosa de prioridad
     Given existe una asignación para el ticket "TK-300" con prioridad "low"
-    When envío una petición POST a "/assignments/reassign/" con body {"ticket_id": "TK-300", "priority": "high"}
+    When envío una petición POST a "/api/assignments/reassign/" con body {"ticket_id": "TK-300", "priority": "high"}
     Then el sistema responde con código de estado 200 OK
     And el campo "priority" es "high"
     And se publica un evento "assignment.reassigned" con old_priority "low" y new_priority "high"
 
   Scenario: Reasignación con la misma prioridad actual (sin cambios)
     Given existe una asignación para el ticket "TK-300" con prioridad "high"
-    When envío una petición POST a "/assignments/reassign/" con body {"ticket_id": "TK-300", "priority": "high"}
+    When envío una petición POST a "/api/assignments/reassign/" con body {"ticket_id": "TK-300", "priority": "high"}
     Then el sistema responde con código de estado 200 OK
     And la prioridad sigue siendo "high"
     And no se publica un evento de reasignación
 
   Scenario: Reasignación de ticket sin asignación previa
     Given no existe asignación para el ticket "TK-999"
-    When envío una petición POST a "/assignments/reassign/" con body {"ticket_id": "TK-999", "priority": "medium"}
+    When envío una petición POST a "/api/assignments/reassign/" con body {"ticket_id": "TK-999", "priority": "medium"}
     Then el sistema responde con código de estado 400 Bad Request
     And el cuerpo contiene un mensaje indicando que no existe asignación para el ticket
 
   Scenario: Reasignación con prioridad inválida
     Given existe una asignación para el ticket "TK-300"
-    When envío una petición POST a "/assignments/reassign/" con body {"ticket_id": "TK-300", "priority": "urgent"}
+    When envío una petición POST a "/api/assignments/reassign/" con body {"ticket_id": "TK-300", "priority": "urgent"}
     Then el sistema responde con código de estado 400 Bad Request
     And el cuerpo contiene las prioridades válidas permitidas
 ```
@@ -295,25 +295,25 @@ Feature: Asignar usuario a asignación
 
   Scenario: Asignación exitosa de usuario a una asignación existente
     Given existe una asignación con ID 5 sin usuario asignado
-    When envío una petición PATCH a "/assignments/5/assign-user/" con body {"assigned_to": "agent-15"}
+    When envío una petición PATCH a "/api/assignments/5/assign-user/" con body {"assigned_to": "agent-15"}
     Then el sistema responde con código de estado 200 OK
     And el campo "assigned_to" es "agent-15"
 
   Scenario: Reasignación de usuario en asignación que ya tenía agente
     Given existe una asignación con ID 5 asignada al usuario "agent-10"
-    When envío una petición PATCH a "/assignments/5/assign-user/" con body {"assigned_to": "agent-20"}
+    When envío una petición PATCH a "/api/assignments/5/assign-user/" con body {"assigned_to": "agent-20"}
     Then el sistema responde con código de estado 200 OK
     And el campo "assigned_to" es "agent-20"
 
   Scenario: Desasignación de usuario (liberar asignación)
     Given existe una asignación con ID 5 asignada al usuario "agent-10"
-    When envío una petición PATCH a "/assignments/5/assign-user/" con body {"assigned_to": null}
+    When envío una petición PATCH a "/api/assignments/5/assign-user/" con body {"assigned_to": null}
     Then el sistema responde con código de estado 200 OK
     And el campo "assigned_to" es null
 
   Scenario: Intento de asignar usuario a asignación inexistente
     Given no existe una asignación con ID 999
-    When envío una petición PATCH a "/assignments/999/assign-user/" con body {"assigned_to": "agent-15"}
+    When envío una petición PATCH a "/api/assignments/999/assign-user/" con body {"assigned_to": "agent-15"}
     Then el sistema responde con código de estado 400 Bad Request
     And el cuerpo contiene un mensaje indicando que no existe la asignación
 ```
@@ -355,18 +355,18 @@ Feature: Eliminar asignación
 
   Scenario: Eliminación exitosa de asignación existente
     Given existe una asignación con ID 7
-    When envío una petición DELETE a "/assignments/7/"
+    When envío una petición DELETE a "/api/assignments/7/"
     Then el sistema responde con código de estado 204 No Content
     And la asignación con ID 7 ya no existe en la base de datos
 
   Scenario: Intento de eliminar asignación inexistente
     Given no existe una asignación con ID 888
-    When envío una petición DELETE a "/assignments/888/"
+    When envío una petición DELETE a "/api/assignments/888/"
     Then el sistema responde con código de estado 404 Not Found
 
   Scenario: Verificación post-eliminación
     Given existía una asignación con ID 7 que fue eliminada
-    When envío una petición GET a "/assignments/7/"
+    When envío una petición GET a "/api/assignments/7/"
     Then el sistema responde con código de estado 404 Not Found
 ```
 
