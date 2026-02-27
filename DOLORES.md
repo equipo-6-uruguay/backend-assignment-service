@@ -117,13 +117,13 @@ Archivos analizados durante esta auditoría:
 
 #### [CPL-01] ViewSet acoplado a infraestructura concreta (sin inversión de dependencias)
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #<PR_NUMBER>, rama `feature/composition-root-di`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #12, rama `feature/composition-root-di`).
 
 ---
 
 #### [CPL-02] Handler de mensajería crea dependencias concretas por evento
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #<PR_NUMBER>, rama `feature/composition-root-di`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #12, rama `feature/composition-root-di`).
 
 ---
 
