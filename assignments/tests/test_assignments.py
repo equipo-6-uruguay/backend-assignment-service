@@ -498,8 +498,7 @@ class AssignmentAPITests(TestCase):
         self.assertIn('ticket_id', response.data)
 
     def test_list_assignments(self):
-        """GET /api/assignments/ debe listar asignaciones"""
-        # Crear más de una página de resultados
+        """GET /api/assignments/ debe retornar un array plano sin paginación."""
         for index in range(25):
             TicketAssignment.objects.create(
                 ticket_id=f'API-LIST-{index}',
@@ -510,12 +509,8 @@ class AssignmentAPITests(TestCase):
         response = self.client.get('/api/assignments/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('count', response.data)
-        self.assertIn('next', response.data)
-        self.assertIn('previous', response.data)
-        self.assertIn('results', response.data)
-        self.assertEqual(response.data['count'], 25)
-        self.assertEqual(len(response.data['results']), 20)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(len(response.data), 25)
 
     @patch('assignments.infrastructure.messaging.event_publisher.RabbitMQEventPublisher.publish')
     def test_reassign_ticket_via_api(self, mock_publish):

@@ -22,6 +22,7 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
     """
     queryset = TicketAssignment.objects.all().order_by('-assigned_at')
     serializer_class = TicketAssignmentSerializer
+    pagination_class = None
     
     def __init__(self, *args, container=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,4 +120,3 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
