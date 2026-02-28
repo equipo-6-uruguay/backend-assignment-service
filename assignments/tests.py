@@ -457,7 +457,7 @@ class AssignmentAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
     
     def test_list_assignments(self):
-        """GET /api/assignments/ debe listar asignaciones"""
+        """GET /api/assignments/ debe listar asignaciones como array plano"""
         # Crear algunas asignaciones
         TicketAssignment.objects.create(
             ticket_id='API-LIST-1',
@@ -468,6 +468,7 @@ class AssignmentAPITests(TestCase):
         response = self.client.get('/api/assignments/')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
         self.assertGreaterEqual(len(response.data), 1)
     
     def test_reassign_ticket_via_api(self):
@@ -675,4 +676,3 @@ class CeleryTaskTests(TestCase):
         self.assertTrue(
             TicketAssignment.objects.filter(ticket_id='APPLY-1').exists()
         )
-
