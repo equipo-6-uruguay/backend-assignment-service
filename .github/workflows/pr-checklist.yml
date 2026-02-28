@@ -1,0 +1,39 @@
+name: PR Checklist
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  validate:
+    name: Validate PR checklist
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate required PR sections
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+
+          body = os.getenv("PR_BODY") or ""
+          required_sections = [
+              "## Descripción",
+              "## Cambios realizados",
+              "## Archivos modificados",
+              "## Criterios de aceptación",
+          ]
+
+          missing = [section for section in required_sections if section not in body]
+
+          if missing:
+              print("Faltan secciones requeridas en el PR:")
+              for section in missing:
+                  print(f"- {section}")
+              sys.exit(1)
+
+          print("PR checklist válido.")
+          PY
