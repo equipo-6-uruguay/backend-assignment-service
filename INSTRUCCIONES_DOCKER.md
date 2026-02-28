@@ -18,7 +18,7 @@ Debemos hacer que cada repo:
 
 Ejemplo futuro:
 
-ghcr.io/equipo-6-uruguay/backend-ticket-service:latest
+ghcr.io/equipo-6-uruguay/backend-assignment-service:latest
 
 Sin esto, el repo infra no puede orquestar nada.
 
@@ -44,7 +44,7 @@ El repo infra no tiene código de negocio.
 **Ejemplo conceptual**:
 
 ticket-service:
-  image: ghcr.io/equipo-6-uruguay/backend-ticket-service:latest
+  image: ghcr.io/equipo-6-uruguay/backend-assignment-service:latest
 
 ---
 

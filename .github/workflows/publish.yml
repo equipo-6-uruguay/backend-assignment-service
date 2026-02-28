@@ -4,8 +4,8 @@
 # Construye la imagen Docker y la publica en GitHub Container Registry (GHCR).
 #
 # Tags generados:
-#   - latest     (solo desde main)
-#   - develop    (solo desde develop)
+#   - latest     (desde main y develop)
+#   - main/develop (según branch)
 #   - v1.2.3     (desde tags semver)
 #   - sha-abc123 (siempre)
 #
@@ -18,9 +18,11 @@ name: Publish Docker Image
 on:
   push:
     branches:
+      - main
       - develop
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -58,7 +60,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref_name == 'main' || github.ref_name == 'develop' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
