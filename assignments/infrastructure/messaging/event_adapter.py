@@ -11,6 +11,7 @@ from assignments.domain.repository import AssignmentRepository
 from assignments.application.event_publisher import EventPublisher
 from assignments.application.use_cases.create_assignment import CreateAssignment
 from assignments.application.use_cases.change_assignment_priority import ChangeAssignmentPriority
+from assignments.application.use_cases.delete_assignment_by_ticket import DeleteAssignmentByTicketIdUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,43 @@ class TicketEventAdapter:
         except Exception as exc:
             logger.exception(
                 "Error inesperado actualizando prioridad del ticket %s: %s",
+                ticket_id,
+                exc,
+            )
+            raise
+            
+    def handle_ticket_deleted(self, event_data: Dict[str, Any]) -> None:
+        """
+        Maneja el evento ticket.deleted.
+        
+        Args:
+            event_data: Diccionario con los datos del evento
+        """
+        ticket_id = event_data.get('ticket_id')
+        
+        if not ticket_id:
+            logger.warning("Evento ticket.deleted sin ticket_id, ignorando")
+            return
+            
+        ticket_id = str(ticket_id)
+        use_case = DeleteAssignmentByTicketIdUseCase(self.repository)
+        
+        try:
+            deleted = use_case.execute(ticket_id=ticket_id)
+            if deleted:
+                logger.info("Asignación para el ticket %s eliminada exitosamente", ticket_id)
+            else:
+                logger.warning("No se encontró asignación para eliminar el ticket %s", ticket_id)
+        except pika.exceptions.AMQPError as exc:
+            logger.error(
+                "Error de mensajería eliminando asignación del ticket %s: %s",
+                ticket_id,
+                exc,
+            )
+            raise
+        except Exception as exc:
+            logger.exception(
+                "Error inesperado eliminando asignación del ticket %s: %s",
                 ticket_id,
                 exc,
             )

@@ -23,5 +23,7 @@ def handle_ticket_event(event_data: Dict[str, Any], container=None) -> None:
         adapter.handle_ticket_created(event_data)
     elif event_type == 'ticket.priority_changed':
         adapter.handle_ticket_priority_changed(event_data)
+    elif event_type == 'ticket.deleted':
+        adapter.handle_ticket_deleted(event_data)
     else:
         print(f"[ASSIGNMENT] Tipo de evento no manejado: {event_type}")

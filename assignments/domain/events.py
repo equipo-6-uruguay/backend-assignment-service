@@ -58,3 +58,20 @@ class AssignmentReassigned(DomainEvent):
             "new_priority": self.new_priority,
             "occurred_at": self.occurred_at.isoformat()
         }
+
+
+@dataclass
+class AssignmentDeleted(DomainEvent):
+    """
+    Evento emitido cuando se elimina una asignación de ticket.
+    """
+    assignment_id: int
+    ticket_id: str
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "event_type": "assignment.deleted",
+            "assignment_id": self.assignment_id,
+            "ticket_id": self.ticket_id,
+            "occurred_at": self.occurred_at.isoformat()
+        }

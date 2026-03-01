@@ -11,6 +11,7 @@ from assignments.application.use_cases.change_assignment_priority import ChangeA
 from assignments.application.use_cases.create_assignment import CreateAssignment
 from assignments.application.use_cases.reassign_ticket import ReassignTicket
 from assignments.application.use_cases.update_assigned_user import UpdateAssignedUser
+from assignments.application.use_cases.delete_assignment import DeleteAssignmentUseCase
 from assignments.domain.repository import AssignmentRepository
 
 
@@ -24,6 +25,7 @@ class AssignmentContainer:
     reassign_ticket: ReassignTicket
     update_assigned_user: UpdateAssignedUser
     change_assignment_priority: ChangeAssignmentPriority
+    delete_assignment: DeleteAssignmentUseCase
 
 
 _container: Optional[AssignmentContainer] = None
@@ -45,6 +47,7 @@ def get_assignment_container() -> AssignmentContainer:
             reassign_ticket=ReassignTicket(repository, event_publisher),
             update_assigned_user=UpdateAssignedUser(repository, event_publisher),
             change_assignment_priority=ChangeAssignmentPriority(repository, event_publisher),
+            delete_assignment=DeleteAssignmentUseCase(repository, event_publisher),
         )
     return _container
 

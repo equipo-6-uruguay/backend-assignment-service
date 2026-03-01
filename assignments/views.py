@@ -115,8 +115,24 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
+            return Response(response_serializer.data)
         except ValueError as e:
             return Response(
                 {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Elimina una asignación usando el caso de uso para emitir eventos de dominio.
+        """
+        instance = self.get_object()
+        success = self.container.delete_assignment.execute(assignment_id=instance.id)
+        
+        if success:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                {'error': 'No se pudo eliminar la asignación'},
                 status=status.HTTP_400_BAD_REQUEST
             )
