@@ -13,13 +13,13 @@ Este documento cataloga de forma exhaustiva los "dolores" (problemas técnicos, 
 
 Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con **4 de severidad alta** y **6 de severidad media**.
 
-### Estado de trazabilidad (2026-02-27)
+### Estado de trazabilidad (2026-03-05)
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **4 PRs abiertas** (#6, #8, #14, #16).
+- Revisión de GitHub al 2026-03-05: PRs de remediacion cerradas y mergeadas en `develop` (#2, #4, #12, #14, #16, #17, #18).
 - Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02, CPL-01, CPL-02**.
-- Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
+- Nota operativa: no hay PRs abiertas de remediacion al corte de esta revision.
 
 ### Top 5 Problemas Críticos
 
@@ -180,7 +180,7 @@ def save(self, assignment: Assignment) -> Assignment:
 
 #### [ERR-02] `except Exception` genérico en publisher y adapter
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16 mergeado en `develop`).
 
 ---
 
@@ -305,7 +305,7 @@ def _safe_close_fn(connection) -> None:
 
 #### [SCL-01] Sin paginación global y queryset completo
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14 mergeado en `develop`).
 
 ---
 
@@ -401,7 +401,7 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [DOC-01] Serializer sin validaciones explícitas del contrato de entrada
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14 mergeado en `develop`).
 
 ---
 
@@ -423,13 +423,13 @@ if self.priority not in self.VALID_PRIORITIES:
 
 #### [EDA-01] ACK prematuro del mensaje antes de confirmar procesamiento real
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16 mergeado en `develop`).
 
 ---
 
 #### [EDA-02] Tarea Celery sin retry/backoff/autoretry explícitos
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16; pendiente merge a `develop`).
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16 mergeado en `develop`).
 
 ---
 

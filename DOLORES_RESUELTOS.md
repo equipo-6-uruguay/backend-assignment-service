@@ -16,17 +16,17 @@ Un dolor/bug se mueve desde `DOLORES.md` a este archivo **solo cuando**:
 
 ---
 
-## 2. Revisión actual (2026-02-27)
+## 2. Revisión actual (2026-03-05)
 
 ### Resultado del repositorio GitHub
 
-- Issues cerradas vinculadas a dolores: **2** (#1, #3) + **2 abiertas en implementación** (#13, #15)
-- Pull Requests mergeadas vinculadas: **2** (#2, #4)
-- Pull Requests abiertas relacionadas con documentación/tests: **2** (#6, #8)
+- Issues cerradas vinculadas a dolores: **4** (#1, #3, #13, #15)
+- Pull Requests de remediacion mergeadas vinculadas: **7** (#2, #4, #12, #14, #16, #17, #18)
+- Pull Requests abiertas relacionadas con remediacion: **0**
 
 ### Resultado en código (`develop`)
 
-Se migraron **13 dolores** por cierre y merge de quick wins/correcciones (incluye implementaciones pendientes de merge a `develop`):
+Se migraron **13 dolores** por cierre y merge de quick wins/correcciones en `develop`:
 
 - `CFG-01` — credenciales RabbitMQ hardcodeadas
 - `SEC-01` — falta de fail-fast con `ALLOWED_HOSTS` vacío en producción
@@ -54,13 +54,13 @@ Se migraron **13 dolores** por cierre y merge de quick wins/correcciones (incluy
 | NOM-01 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
 | NOM-02 | ✅ Resuelto | 2026-02-26 | Issue #1 cerrado + PR #2 mergeado |
 | TST-02 | ✅ Resuelto | 2026-02-27 | Issue #3 cerrado + PR #4 mergeado |
-| SCL-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
-| DOC-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #14 |
-| EDA-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
-| EDA-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
-| ERR-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #16 |
-| CPL-01 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #12 |
-| CPL-02 | 🟡 Implementado (pendiente merge a `develop`) | 2026-02-27 | PR #12 |
+| SCL-01 | ✅ Resuelto | 2026-02-27 | PR #14 mergeado |
+| DOC-01 | ✅ Resuelto | 2026-02-27 | PR #14 mergeado |
+| EDA-01 | ✅ Resuelto | 2026-02-27 | PR #16 mergeado |
+| EDA-02 | ✅ Resuelto | 2026-02-27 | PR #16 mergeado |
+| ERR-02 | ✅ Resuelto | 2026-02-27 | PR #16 mergeado |
+| CPL-01 | ✅ Resuelto | 2026-02-27 | PR #12 mergeado |
+| CPL-02 | ✅ Resuelto | 2026-02-27 | PR #12 mergeado |
 
 ---
 
@@ -70,6 +70,6 @@ Se migraron **13 dolores** por cierre y merge de quick wins/correcciones (incluy
 |---|---|---|---|
 | 2026-02-26 | CFG-01, SEC-01, SEC-02, NOM-01, NOM-02 | Issue #1 cerrado / PR #2 mergeado en `develop` | Auditoría repo |
 | 2026-02-27 | TST-02 | Issue #3 cerrado / PR #4 mergeado en `main` | Auditoría repo |
-| 2026-02-27 | SCL-01, DOC-01 | PR #14 abierto (pendiente merge a `develop`) | Auditoría repo |
-| 2026-02-27 | EDA-01, EDA-02, ERR-02 | PR #16 (rama `feature/resiliencia-post-procesamiento`) | Auditoría repo |
-| 2026-02-27 | CPL-01, CPL-02 | PR #12 (rama `feature/composition-root-di`) | Auditoría repo |
+| 2026-02-27 | SCL-01, DOC-01 | PR #14 mergeado en `develop` | Auditoría repo |
+| 2026-02-27 | EDA-01, EDA-02, ERR-02 | PR #16 mergeado en `develop` | Auditoría repo |
+| 2026-02-27 | CPL-01, CPL-02 | PR #12 mergeado en `develop` | Auditoría repo |
