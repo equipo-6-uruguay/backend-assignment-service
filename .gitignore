@@ -52,9 +52,6 @@ Thumbs.db
 # --- Local docs ---
 *.md
 !/README.md
-!/.github/agents/iris.agent.md
-!/.github/agents/shannahan.agent.md
-!/.github/instructions/copilot-instructions.md
 !/DOLORES.md
 !/DOLORES_RESUELTOS.md
 !/ARCHITECTURE.md
