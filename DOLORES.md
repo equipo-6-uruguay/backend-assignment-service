@@ -11,25 +11,25 @@
 
 Este documento cataloga de forma exhaustiva los "dolores" (problemas técnicos, arquitectónicos y de calidad) identificados en el código base actual del monolito heredado. El objetivo es visibilizar la deuda técnica acumulada para priorizar la refactorización hacia una **Clean Architecture** (Robert C. Martin).
 
-Se identificaron **12+ hallazgos activos** distribuidos en 10 categorías, con **5 de severidad alta** y **7 de severidad media**.
+Se identificaron **10+ hallazgos activos** distribuidos en 10 categorías, con **4 de severidad alta** y **6 de severidad media**.
 
-### Estado de trazabilidad (2026-02-27)
+### Estado de trazabilidad (2026-03-05)
 
 - Este archivo mantiene **solo dolores activos** en `develop`.
 - Los dolores resueltos se registran en `DOLORES_RESUELTOS.md`.
-- Revisión de GitHub al 2026-02-27: **2 PRs mergeadas** (#2, #4) y **2 PRs abiertas** (#6, #8).
-- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, ERR-01, SLD-02**.
-- Nota operativa: los cambios de PR abierta (por ejemplo #8 sobre limpieza de tests/docs) **no** se consideran resueltos hasta merge en rama objetivo.
+- Revisión de GitHub al 2026-03-05: PRs de remediacion cerradas y mergeadas en `develop` (#2, #4, #12, #14, #16, #17, #18).
+- Resultado: se migraron a resueltos **CFG-01, SEC-01, SEC-02, NOM-01, NOM-02, TST-02, SCL-01, DOC-01, EDA-01, EDA-02, ERR-02, CPL-01, CPL-02**.
+- Nota operativa: no hay PRs abiertas de remediacion al corte de esta revision.
 
 ### Top 5 Problemas Críticos
 
 | # | Dolor | Categoría | Impacto |
 |---|---|---|---|
-| 1 | ACK prematuro antes de confirmar procesamiento | Resiliencia EDA | Pérdida de mensajes ante fallos de worker |
-| 2 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
-| 3 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
-| 4 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | ✅ Resuelto |
-| 5 | Sin paginación global en API | Escalabilidad | Degradación de rendimiento con volúmenes altos |
+| 1 | Archivo de tests tipo "god file" con mezcla de capas | Modularidad | Alto costo de mantenimiento y baja confiabilidad de suite |
+| 2 | ViewSet acoplado a infraestructura concreta | Acoplamiento | Imposibilidad de sustituir adaptadores o testear aisladamente |
+| 3 | Repository update sin manejo de `DoesNotExist` | Manejo de Errores | Error 500 no controlado ante IDs huérfanos |
+| 4 | Reconexión en consumer atrapa cualquier error inesperado | Manejo de Errores | Fiabilidad, deuda técnica |
+| 5 | Conexión RabbitMQ nueva por cada evento publicado | Escalabilidad | Reduce throughput del sistema de mensajería |
 
 ---
 
@@ -113,56 +113,13 @@ Archivos analizados durante esta auditoría:
 
 #### [CPL-01] ViewSet acoplado a infraestructura concreta (sin inversión de dependencias)
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/views.py` (líneas 8-34) |
-
-**Descripción:**  
-La capa de presentación instancia directamente `DjangoAssignmentRepository` y `RabbitMQEventPublisher`, violando el Principio de Inversión de Dependencias (DIP). Esto impide sustituir adaptadores para testing o por cambio de tecnología sin modificar la vista.
-
-**Impacto:** Mantenibilidad, deuda técnica, testabilidad
-
-**Evidencia:**
-```python
-from .infrastructure.repository import DjangoAssignmentRepository
-from .infrastructure.messaging.event_publisher import RabbitMQEventPublisher
-...
-class TicketAssignmentViewSet(viewsets.ModelViewSet):
-    queryset = TicketAssignment.objects.all().order_by('-assigned_at')
-    serializer_class = TicketAssignmentSerializer
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.repository = DjangoAssignmentRepository()
-        self.event_publisher = RabbitMQEventPublisher()
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #12, rama `feature/composition-root-di`).
 
 ---
 
 #### [CPL-02] Handler de mensajería crea dependencias concretas por evento
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `messaging/handlers.py` (líneas 16-30) |
-
-**Descripción:**  
-`handle_ticket_event` instancia repositorio y publisher en cada invocación. No hay inyección de dependencias ni factory de ciclo de vida, incrementando acoplamiento y costo por mensaje.
-
-**Impacto:** Mantenibilidad, escalabilidad
-
-**Evidencia:**
-```python
-repository = DjangoAssignmentRepository()
-event_publisher = RabbitMQEventPublisher()
-adapter = TicketEventAdapter(repository, event_publisher)
-
-event_type = event_data.get('event_type', 'ticket.created')
-
-if event_type == 'ticket.created':
-    adapter.handle_ticket_created(event_data)
-elif event_type == 'ticket.priority_changed':
-    adapter.handle_ticket_priority_changed(event_data)
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #11 / PR #12, rama `feature/composition-root-di`).
 
 ---
 
@@ -197,29 +154,33 @@ class AssignmentIntegrationTests(TestCase):
 
 #### [ERR-01] Repository update sin control de `DoesNotExist`
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #9, rama `main`).
+| **Severidad** | **Ubicación** |
+|---|---|
+| 🔴 Alta | `assignments/infrastructure/repository.py` (líneas 19-31) |
+
+**Descripción:**  
+En `save()`, la rama de actualización hace `get(id=assignment.id)` sin manejo de excepción. Un ID huérfano provoca un error 500 no controlado en vez de un error de dominio.
+
+**Impacto:** Mantenibilidad, fiabilidad
+
+**Evidencia:**
+```python
+def save(self, assignment: Assignment) -> Assignment:
+    if assignment.id:
+        model = TicketAssignmentModel.objects.get(id=assignment.id)
+        model.priority = assignment.priority
+        model.assigned_to = assignment.assigned_to
+        model.save()
+    else:
+        model = TicketAssignmentModel.objects.create(
+            ticket_id=assignment.ticket_id,
+```
 
 ---
 
 #### [ERR-02] `except Exception` genérico en publisher y adapter
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `assignments/infrastructure/messaging/event_publisher.py` (L64-68), `assignments/infrastructure/messaging/event_adapter.py` (L56-62) |
-
-**Descripción:**  
-Captura amplia sin tipado específico en puntos críticos EDA dificulta diagnóstico fino y políticas de recuperación diferenciadas.
-
-**Impacto:** Mantenibilidad, resiliencia
-
-**Evidencia:**
-```python
-print(f"[ASSIGNMENT] Evento publicado: {event.to_dict()['event_type']}")
-            
-except Exception as e:
-    print(f"[ASSIGNMENT] Error publicando evento: {e}")
-    raise
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16 mergeado en `develop`).
 
 ---
 
@@ -344,21 +305,7 @@ def _safe_close_fn(connection) -> None:
 
 #### [SCL-01] Sin paginación global y queryset completo
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/views.py` (L18-28), `assessment_service/settings.py` (L161-175) |
-
-**Descripción:**  
-`ModelViewSet` expone el queryset completo sin límite. `REST_FRAMEWORK` no define `DEFAULT_PAGINATION_CLASS` ni `PAGE_SIZE`, degradando rendimiento con volúmenes altos.
-
-**Impacto:** Escalabilidad, rendimiento
-
-**Evidencia:**
-```python
-class TicketAssignmentViewSet(viewsets.ModelViewSet):
-    queryset = TicketAssignment.objects.all().order_by('-assigned_at')
-    serializer_class = TicketAssignmentSerializer
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14 mergeado en `develop`).
 
 ---
 
@@ -413,7 +360,26 @@ return updated_assignment  # ← Sin publicación de evento
 
 #### [SLD-02] Dominio usa `ValueError` genérico en lugar de excepciones de dominio
 
-✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (Issue #9, rama `main`).
+| **Severidad** | **Ubicación** |
+|---|---|
+| 🟡 Media | `assignments/domain/entities.py` (líneas 24-52) |
+
+**Descripción:**  
+La entidad no define una jerarquía de excepciones específica del dominio. Usa `ValueError` genérico, lo que complica el mapeo semántico a respuestas API y dificulta el manejo diferenciado de errores.
+
+**Impacto:** Mantenibilidad, deuda técnica
+
+**Evidencia:**
+```python
+if not self.ticket_id or not self.ticket_id.strip():
+    raise ValueError("ticket_id es requerido y no puede estar vacío")
+
+if self.priority not in self.VALID_PRIORITIES:
+    raise ValueError(
+        f"priority debe ser uno de {self.VALID_PRIORITIES}, "
+        f"recibido: {self.priority}"
+    )
+```
 
 ---
 
@@ -435,23 +401,7 @@ return updated_assignment  # ← Sin publicación de evento
 
 #### [DOC-01] Serializer sin validaciones explícitas del contrato de entrada
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🟡 Media | `assignments/serializers.py` (líneas 1-9) |
-
-**Descripción:**  
-No hay métodos `validate_*` para `ticket_id` ni `priority`. La validación se delega completamente al dominio, pero la capa HTTP no documenta ni normaliza los errores para el consumidor de la API.
-
-**Impacto:** Mantenibilidad, consistencia de API
-
-**Evidencia:**
-```python
-class TicketAssignmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TicketAssignment
-        fields = ['id', 'ticket_id', 'priority', 'assigned_at', 'assigned_to']
-        read_only_fields = ['id', 'assigned_at']
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #14 mergeado en `develop`).
 
 ---
 
@@ -473,50 +423,13 @@ class TicketAssignmentSerializer(serializers.ModelSerializer):
 
 #### [EDA-01] ACK prematuro del mensaje antes de confirmar procesamiento real
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `messaging/consumer.py` (líneas 56-67) |
-
-**Descripción:**  
-Se confirma la recepción del mensaje (`basic_ack`) después de enviar la tarea a Celery con `delay()`, no después del procesamiento exitoso. Si el worker Celery cae después del ACK, el mensaje se pierde del broker.
-
-**Impacto:** Resiliencia, riesgo de pérdida de datos, escalabilidad
-
-**Evidencia:**
-```python
-try:
-    event_data = json.loads(body)
-    process_ticket_event.delay(event_data)
-    logger.info("Event received and sent to Celery: %s", event_data)
-    ch.basic_ack(delivery_tag=method.delivery_tag)  # ← ACK antes de procesamiento real
-except Exception as e:
-    logger.error("Error processing message: %s", e)
-    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16 mergeado en `develop`).
 
 ---
 
 #### [EDA-02] Tarea Celery sin retry/backoff/autoretry explícitos
 
-| **Severidad** | **Ubicación** |
-|---|---|
-| 🔴 Alta | `assignments/tasks.py` (líneas 6-18) |
-
-**Descripción:**  
-`process_ticket_event` no define política de reintentos ni idempotencia. Ante errores transitorios (timeout DB, broker) se degrada silenciosamente la confiabilidad del pipeline.
-
-**Impacto:** Resiliencia, fiabilidad
-
-**Evidencia:**
-```python
-@shared_task
-def process_ticket_event(event_data: Dict[str, Any]):
-    """
-    Celery task que procesa eventos de ticket en segundo plano.
-    """
-    from messaging.handlers import handle_ticket_event
-    handle_ticket_event(event_data)
-```
+✅ **Migrado a resueltos** en `DOLORES_RESUELTOS.md` (PR #16 mergeado en `develop`).
 
 ---
 
@@ -577,17 +490,17 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | **SCL-02**: Conexión RabbitMQ nueva por mensaje | SRP en infraestructura + OCP | Mejor throughput, menor latencia y menor presión de red | Introducir publisher con conexión/canal reutilizable y lifecycle controlado | Media |
 | **ERR-01/02/03**: Errores genéricos y sin control | SRP + DIP + manejo explícito de límites | Errores predecibles y reintentos sólo cuando corresponde | Definir taxonomía de excepciones (dominio/aplicación/infra) y políticas de retry por tipo | Alta |
 | **SLD-02**: `ValueError` genérico en dominio | Modelo de dominio explícito + SRP | Reglas de negocio expresivas y trazables | Crear jerarquía de `DomainException` y mapearla en capa de aplicación | Alta |
-| **EDA-01/02/03**: ACK prematuro, sin retry/backoff, DLQ inconsistente | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Confirmar ACK post-procesamiento, retries exponenciales y convención única de routing keys/DLQ | Alta |
+| **EDA-03**: DLQ inconsistente (con EDA-01 y EDA-02 ya resueltos en PR #16) | Boundary control + DIP + robustez en adapters EDA | Entrega al-menos-una-vez con menor pérdida de mensajes | Mantener convención única de routing keys/DLQ y validar contrato operativo en tests/consumer | Alta |
 | **DUP-01 + MOD-01**: Tests duplicados y archivo "god file" | SRP + separación por capa/caso de uso | Suites mantenibles, rápidas y con menor costo de cambio | Reorganizar tests por dominio/aplicación/infra/API y eliminar duplicados con fixtures reutilizables | Media |
 | **TST-01**: Tests replican lógica del consumer en lugar de invocar el módulo real | Testabilidad real de casos de uso/adapters + OCP | Mayor confianza y menos falsos positivos | Probar comportamiento público real (módulos/routers reales), no reimplementaciones en test | Alta |
 | **SLD-01**: `event_publisher` inyectado pero no usado | ISP + SRP | Contratos más pequeños y menor ruido en dependencias | Segregar interfaces y dependencias por caso de uso (solo lo que consume cada uno) | Media |
-| **DOC-01**: Serializer sin validaciones de contrato | Interface Adapters: validación en borde | Entradas más seguras y consistentes antes de llegar al dominio | Añadir validadores explícitos por campo y mensajes de error de contrato | Media |
-| **SCL-01**: Sin paginación por defecto | OCP + separación de concerns en interfaz | Escalabilidad de API y menor carga por request | Definir política global de paginación en capa de presentación (DRF settings) | Media |
 | **DEB-01**: Divergencia migración vs modelo | Single Source of Truth en límites de persistencia + SRP | Menos drift entre código y esquema; menos incidentes en deploy | Corregir contrato ORM↔migración y añadir chequeo de consistencia en CI | Alta |
 
 ---
 
 ## 6. Plan de Priorización y Remediación
+
+> ℹ️ EDA-01, EDA-02 y ERR-02 fueron resueltos en PR #16 y migrados a `DOLORES_RESUELTOS.md`.
 
 ### ⚡ Quick Wins (Corto Plazo — 1 Sprint)
 
@@ -600,10 +513,7 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | ID | Tarea | Esfuerzo | Beneficio |
 |---|---|---|---|
 | ERR-01 | Agregar manejo de `DoesNotExist` en repository update | Medio | Estabilidad |
-| DOC-01 | Añadir validaciones explícitas al serializer | Medio | Consistencia de API |
-| SCL-01 | Configurar paginación global en DRF settings | Medio | Escalabilidad |
 | SLD-02 | Crear jerarquía de excepciones de dominio | Medio | Dominio expresivo |
-| EDA-02 | Agregar retry/backoff a task Celery | Medio | Resiliencia EDA |
 | DUP-01 | Consolidar tests de integración duplicados | Medio | Mantenibilidad |
 
 ### 🏗️ Estructural (Largo Plazo — 3+ Sprints)
@@ -611,7 +521,6 @@ La migración inicial define `auto_now_add=True` para `assigned_at`, pero el mod
 | ID | Tarea | Esfuerzo | Beneficio |
 |---|---|---|---|
 | CPL-01 | Implementar inversión de dependencias en ViewSet | Alto | Desacoplamiento total |
-| EDA-01 | Rediseñar flujo ACK post-procesamiento | Alto | Cero pérdida de mensajes |
 | MOD-01 | Reorganizar tests por capa (dominio/app/infra/API) | Alto | Suite mantenible |
 | SCL-02 | Publisher con conexión RabbitMQ reutilizable | Alto | Throughput optimizado |
 | CFG-02 | Separar entrypoints Docker (web, worker, migrate) | Alto | Operabilidad |

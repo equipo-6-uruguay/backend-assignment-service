@@ -5,15 +5,11 @@ No contiene lógica de negocio, solo orquesta la ejecución de casos de uso.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from assessment_service.container import get_assignment_container
+from assignments.domain.exceptions import DomainException
 
 from .models import TicketAssignment
 from .serializers import TicketAssignmentSerializer
-from .infrastructure.repository import DjangoAssignmentRepository
-from .infrastructure.messaging.event_publisher import RabbitMQEventPublisher
-from .application.use_cases.create_assignment import CreateAssignment
-from .application.use_cases.reassign_ticket import ReassignTicket
-from .application.use_cases.update_assigned_user import UpdateAssignedUser
-from .domain.exceptions import DomainException, AssignmentNotFound
 
 
 class TicketAssignmentViewSet(viewsets.ModelViewSet):
@@ -27,11 +23,11 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
     """
     queryset = TicketAssignment.objects.all().order_by('-assigned_at')
     serializer_class = TicketAssignmentSerializer
+    pagination_class = None
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, container=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.repository = DjangoAssignmentRepository()
-        self.event_publisher = RabbitMQEventPublisher()
+        self.container = container or get_assignment_container()
     
     def create(self, request, *args, **kwargs):
         """
@@ -44,10 +40,8 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
         priority = serializer.validated_data['priority']
         assigned_to = serializer.validated_data.get('assigned_to')
         
-        use_case = CreateAssignment(self.repository, self.event_publisher)
-        
         try:
-            assignment = use_case.execute(
+            assignment = self.container.create_assignment.execute(
                 ticket_id=ticket_id,
                 priority=priority,
                 assigned_to=assigned_to
@@ -60,11 +54,6 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             return Response(
                 response_serializer.data,
                 status=status.HTTP_201_CREATED
-            )
-        except AssignmentNotFound as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_404_NOT_FOUND
             )
         except DomainException as e:
             return Response(
@@ -89,10 +78,8 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        use_case = ReassignTicket(self.repository, self.event_publisher)
-        
         try:
-            assignment = use_case.execute(
+            assignment = self.container.reassign_ticket.execute(
                 ticket_id=ticket_id,
                 new_priority=new_priority
             )
@@ -102,11 +89,6 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
-        except AssignmentNotFound as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except DomainException as e:
             return Response(
                 {'error': str(e)},
@@ -123,10 +105,8 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
         """
         assigned_to = request.data.get('assigned_to')
         
-        use_case = UpdateAssignedUser(self.repository, self.event_publisher)
-        
         try:
-            assignment = use_case.execute(
+            assignment = self.container.update_assigned_user.execute(
                 assignment_id=int(pk),
                 assigned_to=assigned_to
             )
@@ -136,14 +116,23 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
-        except AssignmentNotFound as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    def destroy(self, request, *args, **kwargs):
+        """
+        Elimina una asignación usando el caso de uso para emitir eventos de dominio.
+        """
+        instance = self.get_object()
+        success = self.container.delete_assignment.execute(assignment_id=instance.id)
+        
+        if success:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                {'error': 'No se pudo eliminar la asignación'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

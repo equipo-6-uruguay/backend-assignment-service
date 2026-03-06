@@ -21,7 +21,7 @@ La solución está implementada sobre **Django 6.0.2 + DRF 3.16.1**, con persist
 
 ## 2. Debate Arquitectónico: Monolito vs Clean Architecture
 
-Este documento consolida el debate formal iniciado en [Actividad_1.1.md](Actividad_1.1.md), donde se identifican 24 dolores técnicos del código heredado y se evalúa su remediación con principios de Clean Architecture + SOLID.
+Este documento consolida el debate arquitectonico del servicio, donde se identifican dolores tecnicos del codigo heredado y se evalua su remediacion con principios de Clean Architecture + SOLID.
 
 ### 2.1 ¿Qué es Clean Architecture?
 
@@ -530,7 +530,7 @@ Emitido al cambiar prioridad de una asignación.
 
 ## 6. Propuesta de Mejora (Pseudocódigo CA)
 
-Resumen de los 6 dolores críticos documentados en [Actividad_1.1.md](Actividad_1.1.md):
+Resumen de los 6 dolores criticos documentados para el servicio:
 
 ### 6.1 CPL-01 — ViewSet desacoplado por Composition Root + DIP
 
@@ -637,6 +637,5 @@ Esto habilita una hoja de ruta técnica coherente con los entregables del taller
 
 ## Referencias cruzadas
 
-- [Actividad_1.1.md](Actividad_1.1.md)
 - [TEST_PLAN_V3.md](TEST_PLAN_V3.md)
 - [USERSTORIES Y CRITERIOS DE ACEPTACION.md](USERSTORIES%20Y%20CRITERIOS%20DE%20ACEPTACION.md)

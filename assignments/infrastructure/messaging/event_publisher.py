@@ -2,12 +2,17 @@
 Implementación del EventPublisher usando RabbitMQ.
 """
 import json
+import logging
 import os
+
 import pika
+import pika.exceptions
 from typing import Optional
 
 from assignments.domain.events import DomainEvent
 from assignments.application.event_publisher import EventPublisher
+
+logger = logging.getLogger(__name__)
 
 
 class RabbitMQEventPublisher(EventPublisher):
@@ -34,6 +39,10 @@ class RabbitMQEventPublisher(EventPublisher):
         
         Args:
             event: Evento a publicar
+
+        Raises:
+            pika.exceptions.AMQPConnectionError: Si no se puede conectar al broker.
+            pika.exceptions.AMQPChannelError: Si hay error a nivel de canal.
         """
         try:
             connection = pika.BlockingConnection(
@@ -61,8 +70,17 @@ class RabbitMQEventPublisher(EventPublisher):
             
             connection.close()
             
-            print(f"[ASSIGNMENT] Evento publicado: {event.to_dict()['event_type']}")
-            
-        except Exception as e:
-            print(f"[ASSIGNMENT] Error publicando evento: {e}")
+            logger.info(
+                "Evento publicado exitosamente: %s",
+                event.to_dict().get('event_type', 'unknown'),
+            )
+
+        except pika.exceptions.AMQPConnectionError as exc:
+            logger.error("Error de conexión al broker RabbitMQ: %s", exc)
+            raise
+        except pika.exceptions.AMQPChannelError as exc:
+            logger.error("Error de canal RabbitMQ: %s", exc)
+            raise
+        except Exception as exc:
+            logger.exception("Error inesperado publicando evento: %s", exc)
             raise

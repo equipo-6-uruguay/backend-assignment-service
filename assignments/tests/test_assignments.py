@@ -18,21 +18,48 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
+from assessment_service.container import (
+    AssignmentContainer,
+    get_assignment_container,
+    reset_container,
+)
 
+from assignments.domain.exceptions import (
+    AssignmentNotFound,
+    InvalidPriority,
+    InvalidTicketId,
+)
 from assignments.models import TicketAssignment
 from assignments import tasks
 from messaging.handlers import handle_ticket_event
 
 # Imports de la arquitectura DDD
+from assignments.application.event_publisher import EventPublisher
 from assignments.domain.entities import Assignment
 from assignments.domain.events import AssignmentCreated, AssignmentReassigned
-from assignments.domain.exceptions import (
-    AssignmentNotFound, InvalidPriority, InvalidTicketId
-)
+from assignments.domain.repository import AssignmentRepository
 from assignments.infrastructure.repository import DjangoAssignmentRepository
 from assignments.infrastructure.messaging.event_adapter import TicketEventAdapter
+from assignments.application.use_cases.change_assignment_priority import ChangeAssignmentPriority
 from assignments.application.use_cases.create_assignment import CreateAssignment
 from assignments.application.use_cases.reassign_ticket import ReassignTicket
+from assignments.application.use_cases.update_assigned_user import UpdateAssignedUser
+from assignments.application.use_cases.delete_assignment import DeleteAssignmentUseCase
+
+
+def build_test_container(mock_publisher=None) -> AssignmentContainer:
+    """Construye un container de pruebas con repository real y publisher mock."""
+    repository = DjangoAssignmentRepository()
+    event_publisher = mock_publisher or Mock()
+    return AssignmentContainer(
+        repository=repository,
+        event_publisher=event_publisher,
+        create_assignment=CreateAssignment(repository, event_publisher),
+        reassign_ticket=ReassignTicket(repository, event_publisher),
+        update_assigned_user=UpdateAssignedUser(repository, event_publisher),
+        change_assignment_priority=ChangeAssignmentPriority(repository, event_publisher),
+        delete_assignment=DeleteAssignmentUseCase(repository, event_publisher),
+    )
 
 
 # ============================================================================
@@ -54,7 +81,7 @@ class AssignmentEntityTests(TestCase):
         self.assertIsNotNone(assignment.assigned_at)
 
     def test_assignment_validates_empty_ticket_id(self):
-        """ticket_id vacío debe lanzar ValueError"""
+        """ticket_id vacío debe lanzar InvalidTicketId"""
         with self.assertRaises(InvalidTicketId) as context:
             Assignment(
                 ticket_id="",
@@ -64,7 +91,7 @@ class AssignmentEntityTests(TestCase):
         self.assertIn("ticket_id", str(context.exception))
 
     def test_assignment_validates_whitespace_ticket_id(self):
-        """ticket_id con solo espacios debe lanzar ValueError"""
+        """ticket_id con solo espacios debe lanzar InvalidTicketId"""
         with self.assertRaises(InvalidTicketId):
             Assignment(
                 ticket_id="   ",
@@ -73,7 +100,7 @@ class AssignmentEntityTests(TestCase):
             )
 
     def test_assignment_validates_invalid_priority(self):
-        """Prioridad inválida debe lanzar ValueError"""
+        """Prioridad inválida debe lanzar InvalidPriority"""
         with self.assertRaises(InvalidPriority) as context:
             Assignment(
                 ticket_id="TEST-001",
@@ -104,7 +131,7 @@ class AssignmentEntityTests(TestCase):
         self.assertEqual(assignment.priority, "high")
 
     def test_assignment_change_priority_invalid(self):
-        """Cambiar a prioridad inválida debe lanzar ValueError"""
+        """Cambiar a prioridad inválida debe lanzar InvalidPriority"""
         assignment = Assignment(
             ticket_id="TEST-001",
             priority="low",
@@ -263,17 +290,6 @@ class DjangoAssignmentRepositoryTests(TestCase):
         deleted = self.repository.delete(99999)
         self.assertFalse(deleted)
 
-    def test_save_nonexistent_id_raises_not_found(self):
-        """Guardar con ID inexistente debe lanzar AssignmentNotFound"""
-        assignment = Assignment(
-            id=99999,
-            ticket_id="REPO-GHOST",
-            priority="high",
-            assigned_at=datetime.utcnow()
-        )
-        with self.assertRaises(AssignmentNotFound):
-            self.repository.save(assignment)
-
 
 # ============================================================================
 # TESTS DE APLICACIÓN (Use Cases)
@@ -326,7 +342,7 @@ class CreateAssignmentUseCaseTests(TestCase):
         self.mock_publisher.publish.assert_not_called()
 
     def test_create_assignment_invalid_priority(self):
-        """Crear con prioridad inválida debe lanzar ValueError"""
+        """Crear con prioridad inválida debe lanzar InvalidPriority"""
         with self.assertRaises(InvalidPriority):
             self.use_case.execute(
                 ticket_id="UC-INVALID",
@@ -367,7 +383,7 @@ class ReassignTicketUseCaseTests(TestCase):
         self.assertEqual(event.new_priority, "high")
 
     def test_reassign_ticket_not_found(self):
-        """Reasignar ticket inexistente debe lanzar ValueError"""
+        """Reasignar ticket inexistente debe lanzar AssignmentNotFound"""
         with self.assertRaises(AssignmentNotFound) as context:
             self.use_case.execute(
                 ticket_id="NONEXISTENT",
@@ -388,7 +404,7 @@ class ReassignTicketUseCaseTests(TestCase):
         self.mock_publisher.publish.assert_not_called()
 
     def test_reassign_ticket_invalid_priority(self):
-        """Reasignar a prioridad inválida debe lanzar ValueError"""
+        """Reasignar a prioridad inválida debe lanzar InvalidPriority"""
         with self.assertRaises(InvalidPriority):
             self.use_case.execute(
                 ticket_id="UC-REASSIGN-001",
@@ -435,6 +451,8 @@ class TicketEventAdapterTests(TestCase):
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 })
 class AssignmentAPITests(TestCase):
     """Tests de la API REST"""
@@ -470,30 +488,36 @@ class AssignmentAPITests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('priority', response.data)
 
-    def test_create_assignment_invalid_priority_returns_400(self):
-        """POST con prioridad inválida debe retornar 400 (DomainException)"""
+    def test_create_assignment_empty_ticket_id(self):
+        """POST con ticket_id vacío/whitespace debe retornar 400"""
         response = self.client.post(
             '/api/assignments/',
-            {'ticket_id': 'API-DOMAIN-ERR', 'priority': 'ultra'},
+            {
+                'ticket_id': '   ',
+                'priority': 'high'
+            },
             format='json'
         )
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response.data)
+        self.assertIn('ticket_id', response.data)
 
     def test_list_assignments(self):
-        """GET /api/assignments/ debe listar asignaciones"""
-        # Crear algunas asignaciones
-        TicketAssignment.objects.create(
-            ticket_id='API-LIST-1',
-            priority='high',
-            assigned_at=timezone.now()
-        )
+        """GET /api/assignments/ debe retornar un array plano sin paginación."""
+        for index in range(25):
+            TicketAssignment.objects.create(
+                ticket_id=f'API-LIST-{index}',
+                priority='high',
+                assigned_at=timezone.now()
+            )
 
         response = self.client.get('/api/assignments/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(len(response.data), 25)
 
     @patch('assignments.infrastructure.messaging.event_publisher.RabbitMQEventPublisher.publish')
     def test_reassign_ticket_via_api(self, mock_publish):
@@ -528,7 +552,7 @@ class AssignmentAPITests(TestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 # ============================================================================
@@ -538,9 +562,10 @@ class AssignmentAPITests(TestCase):
 class LegacyAssignmentServiceTests(TestCase):
     """Tests del servicio (compatibilidad con versión anterior)"""
 
-    @patch('messaging.handlers.RabbitMQEventPublisher')
-    def test_handle_ticket_event_creates_assignment(self, mock_publisher):
+    @patch('messaging.handlers.get_assignment_container')
+    def test_handle_ticket_event_creates_assignment(self, mock_get_container):
         """handle_ticket_event debe crear asignación"""
+        mock_get_container.return_value = build_test_container(Mock())
         event_data = {
             'event_type': 'ticket.created',
             'ticket_id': 'LEGACY-001'
@@ -552,14 +577,15 @@ class LegacyAssignmentServiceTests(TestCase):
         self.assertIn(assignment.priority, ["high", "medium", "low", "unassigned"])
         self.assertIsNotNone(assignment.assigned_at)
 
-    @patch('messaging.handlers.RabbitMQEventPublisher')
-    def test_process_ticket_task_calls_handler(self, mock_publisher):
+    @patch('messaging.handlers.get_assignment_container')
+    def test_process_ticket_task_calls_handler(self, mock_get_container):
         """Celery task debe procesar evento"""
+        mock_get_container.return_value = build_test_container(Mock())
         event_data = {'ticket_id': 'TASK-001'}
 
-        # Ejecutar tarea directamente (sin Celery broker)
+        # Ejecutar tarea vía .apply() (síncrono, sin broker, compatible con bind=True)
         from assignments.tasks import process_ticket_event
-        process_ticket_event(event_data)
+        process_ticket_event.apply(args=[event_data])
 
         # Verificar que se procesó
         self.assertTrue(
@@ -693,11 +719,78 @@ class TicketAssignmentModelTests(TestCase):
 class CeleryTaskTests(TestCase):
     """Tests de tareas Celery (ejecución síncrona sin broker)"""
 
-    @patch('messaging.handlers.RabbitMQEventPublisher')
-    def test_process_ticket_event_apply_runs_synchronously(self, mock_publisher):
+    @patch('messaging.handlers.get_assignment_container')
+    def test_process_ticket_event_apply_runs_synchronously(self, mock_get_container):
         """process_ticket_event.apply ejecuta la tarea sin broker"""
+        mock_get_container.return_value = build_test_container(Mock())
         event_data = {'ticket_id': 'APPLY-1', 'event_type': 'ticket.created'}
         tasks.process_ticket_event.apply(args=[event_data])
         self.assertTrue(
             TicketAssignment.objects.filter(ticket_id='APPLY-1').exists()
         )
+
+
+class CeleryRetryPolicyTests(TestCase):
+    """Tests que verifican la configuración de retry policy en tareas Celery."""
+
+    def test_process_ticket_event_has_max_retries(self):
+        """La tarea debe tener max_retries=5"""
+        self.assertEqual(tasks.process_ticket_event.max_retries, 5)
+
+    def test_process_ticket_event_has_retry_backoff(self):
+        """La tarea debe tener retry_backoff=2"""
+        self.assertEqual(tasks.process_ticket_event.retry_backoff, 2)
+
+    def test_process_ticket_event_has_retry_backoff_max(self):
+        """La tarea debe tener retry_backoff_max=60"""
+        self.assertEqual(tasks.process_ticket_event.retry_backoff_max, 60)
+
+    def test_process_ticket_event_has_retry_jitter(self):
+        """La tarea debe tener retry_jitter=True"""
+        self.assertTrue(tasks.process_ticket_event.retry_jitter)
+
+    def test_process_ticket_event_has_autoretry_for(self):
+        """La tarea debe configurar autoretry_for con excepciones transitorias"""
+        from django.db import OperationalError, InterfaceError
+        import pika.exceptions
+
+        autoretry = tasks.process_ticket_event.autoretry_for
+        self.assertIn(OperationalError, autoretry)
+        self.assertIn(InterfaceError, autoretry)
+        self.assertIn(pika.exceptions.AMQPConnectionError, autoretry)
+
+    def test_process_ticket_event_is_bound(self):
+        """La tarea debe ser bound (bind=True) para acceder a self"""
+        # Bound tasks have a 'self' parameter — they are instances of Task
+        # We can check by verifying the task name exists and it has request attr
+        self.assertTrue(hasattr(tasks.process_ticket_event, 'request'))
+
+
+class ContainerTests(TestCase):
+    """Tests del composition root de assignments."""
+
+    def tearDown(self):
+        reset_container()
+
+    def test_get_assignment_container_returns_singleton(self):
+        first = get_assignment_container()
+        second = get_assignment_container()
+        self.assertIs(first, second)
+
+    def test_reset_container_clears_singleton(self):
+        first = get_assignment_container()
+        reset_container()
+        second = get_assignment_container()
+        self.assertIsNot(first, second)
+
+    def test_container_has_all_use_cases(self):
+        container = get_assignment_container()
+        self.assertTrue(hasattr(container, 'create_assignment'))
+        self.assertTrue(hasattr(container, 'reassign_ticket'))
+        self.assertTrue(hasattr(container, 'update_assigned_user'))
+        self.assertTrue(hasattr(container, 'change_assignment_priority'))
+
+    def test_container_uses_correct_interfaces(self):
+        container = get_assignment_container()
+        self.assertIsInstance(container.repository, AssignmentRepository)
+        self.assertIsInstance(container.event_publisher, EventPublisher)

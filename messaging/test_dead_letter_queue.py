@@ -61,6 +61,7 @@ def _import_consumer_module():
         "django", "django.conf", "django.setup",
         "pika", "pika.exceptions",
         "assignments", "assignments.tasks",
+        "messaging.handlers",
         "assessment_service", "assessment_service.settings",
     ]
 
@@ -267,6 +268,81 @@ class TestAssignmentDLQDeclaredAndBound:
 
 
 # ---------------------------------------------------------------------------
+# Tests: Successful messages are acked, not nacked
+# ---------------------------------------------------------------------------
+
+class TestAssignmentSuccessfulMessageAck:
+    """Verify that successful processing results in ack (not nack)."""
+
+    def test_successful_message_is_acked(self) -> None:
+        """When handler succeeds, message must be acked."""
+        consumer, mock_pika = _import_consumer_module()
+
+        mock_ch = MagicMock()
+        mock_method = MagicMock()
+        mock_method.delivery_tag = 10
+        mock_properties = MagicMock()
+
+        body = json.dumps({
+            "event_type": "ticket.created",
+            "ticket_id": 1,
+        }).encode()
+
+        mock_handler = MagicMock()  # succeeds (no side_effect)
+        with patch.object(consumer, "handle_ticket_event", mock_handler):
+            consumer.callback(mock_ch, mock_method, mock_properties, body)
+
+        mock_ch.basic_ack.assert_called_once_with(delivery_tag=10)
+        mock_ch.basic_nack.assert_not_called()
+
+    def test_successful_message_is_not_nacked(self) -> None:
+        """When handler succeeds, basic_nack must NOT be called."""
+        consumer, mock_pika = _import_consumer_module()
+
+        mock_ch = MagicMock()
+        mock_method = MagicMock()
+        mock_method.delivery_tag = 11
+        mock_properties = MagicMock()
+
+        body = json.dumps({
+            "event_type": "ticket.created",
+            "ticket_id": 2,
+        }).encode()
+
+        mock_handler = MagicMock()
+        with patch.object(consumer, "handle_ticket_event", mock_handler):
+            consumer.callback(mock_ch, mock_method, mock_properties, body)
+
+        mock_ch.basic_nack.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Tests: Invalid JSON is nacked with requeue=False
+# ---------------------------------------------------------------------------
+
+class TestAssignmentInvalidJsonNack:
+    """Verify that invalid JSON payloads are nacked to DLQ."""
+
+    def test_invalid_json_is_nacked(self) -> None:
+        """Non-JSON body must be nacked with requeue=False."""
+        consumer, mock_pika = _import_consumer_module()
+
+        mock_ch = MagicMock()
+        mock_method = MagicMock()
+        mock_method.delivery_tag = 50
+        mock_properties = MagicMock()
+
+        body = b"not valid json {{"
+
+        consumer.callback(mock_ch, mock_method, mock_properties, body)
+
+        mock_ch.basic_nack.assert_called_once_with(
+            delivery_tag=50, requeue=False
+        )
+        mock_ch.basic_ack.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # Tests: Failed messages are nacked with requeue=False
 # ---------------------------------------------------------------------------
 
@@ -274,16 +350,14 @@ class TestAssignmentFailedMessageNack:
     """Verify that processing failures result in nack(requeue=False)."""
 
     def test_failed_message_is_nacked_without_requeue(self) -> None:
-        """When callback raises, message must be nacked with requeue=False."""
+        """When handler raises, message must be nacked with requeue=False."""
         consumer, mock_pika = _import_consumer_module()
 
-        # Mock channel and method
         mock_ch = MagicMock()
         mock_method = MagicMock()
         mock_method.delivery_tag = 42
         mock_properties = MagicMock()
 
-        # Valid JSON body
         body = json.dumps({
             "event_type": "ticket.created",
             "ticket_id": 1,
@@ -291,22 +365,16 @@ class TestAssignmentFailedMessageNack:
             "timestamp": "2026-01-01T00:00:00Z",
         }).encode()
 
-        # Make the task processing raise an exception
-        with patch.object(
-            consumer, "process_ticket_event", create=True
-        ) as mock_task:
-            mock_delay = MagicMock(side_effect=Exception("Processing failed"))
-            mock_task.delay = mock_delay
-
+        mock_handler = MagicMock(side_effect=Exception("Processing failed"))
+        with patch.object(consumer, "handle_ticket_event", mock_handler):
             consumer.callback(mock_ch, mock_method, mock_properties, body)
 
-        # Verify nack was called with requeue=False
         mock_ch.basic_nack.assert_called_once_with(
             delivery_tag=42, requeue=False
         )
 
     def test_failed_message_is_not_acked(self) -> None:
-        """When callback fails, basic_ack must NOT be called."""
+        """When handler fails, basic_ack must NOT be called."""
         consumer, mock_pika = _import_consumer_module()
 
         mock_ch = MagicMock()
@@ -321,15 +389,10 @@ class TestAssignmentFailedMessageNack:
             "timestamp": "2026-01-01T00:00:00Z",
         }).encode()
 
-        with patch.object(
-            consumer, "process_ticket_event", create=True
-        ) as mock_task:
-            mock_delay = MagicMock(side_effect=Exception("Boom"))
-            mock_task.delay = mock_delay
-
+        mock_handler = MagicMock(side_effect=Exception("Boom"))
+        with patch.object(consumer, "handle_ticket_event", mock_handler):
             consumer.callback(mock_ch, mock_method, mock_properties, body)
 
-        # On failure, ack should NOT have been called
         mock_ch.basic_ack.assert_not_called()
 
 
