@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from assessment_service.container import get_assignment_container
+from assignments.domain.exceptions import DomainException
 
 from .models import TicketAssignment
 from .serializers import TicketAssignmentSerializer
@@ -54,7 +55,7 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
                 response_serializer.data,
                 status=status.HTTP_201_CREATED
             )
-        except ValueError as e:
+        except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -88,7 +89,7 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
-        except ValueError as e:
+        except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -115,8 +116,7 @@ class TicketAssignmentViewSet(viewsets.ModelViewSet):
             )
             
             return Response(response_serializer.data)
-            return Response(response_serializer.data)
-        except ValueError as e:
+        except DomainException as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST

@@ -24,6 +24,11 @@ from assessment_service.container import (
     reset_container,
 )
 
+from assignments.domain.exceptions import (
+    AssignmentNotFound,
+    InvalidPriority,
+    InvalidTicketId,
+)
 from assignments.models import TicketAssignment
 from assignments import tasks
 from messaging.handlers import handle_ticket_event
@@ -76,8 +81,8 @@ class AssignmentEntityTests(TestCase):
         self.assertIsNotNone(assignment.assigned_at)
 
     def test_assignment_validates_empty_ticket_id(self):
-        """ticket_id vacío debe lanzar ValueError"""
-        with self.assertRaises(ValueError) as context:
+        """ticket_id vacío debe lanzar InvalidTicketId"""
+        with self.assertRaises(InvalidTicketId) as context:
             Assignment(
                 ticket_id="",
                 priority="high",
@@ -86,8 +91,8 @@ class AssignmentEntityTests(TestCase):
         self.assertIn("ticket_id", str(context.exception))
 
     def test_assignment_validates_whitespace_ticket_id(self):
-        """ticket_id con solo espacios debe lanzar ValueError"""
-        with self.assertRaises(ValueError):
+        """ticket_id con solo espacios debe lanzar InvalidTicketId"""
+        with self.assertRaises(InvalidTicketId):
             Assignment(
                 ticket_id="   ",
                 priority="high",
@@ -95,8 +100,8 @@ class AssignmentEntityTests(TestCase):
             )
 
     def test_assignment_validates_invalid_priority(self):
-        """Prioridad inválida debe lanzar ValueError"""
-        with self.assertRaises(ValueError) as context:
+        """Prioridad inválida debe lanzar InvalidPriority"""
+        with self.assertRaises(InvalidPriority) as context:
             Assignment(
                 ticket_id="TEST-001",
                 priority="urgent",  # No es válida
@@ -126,13 +131,13 @@ class AssignmentEntityTests(TestCase):
         self.assertEqual(assignment.priority, "high")
 
     def test_assignment_change_priority_invalid(self):
-        """Cambiar a prioridad inválida debe lanzar ValueError"""
+        """Cambiar a prioridad inválida debe lanzar InvalidPriority"""
         assignment = Assignment(
             ticket_id="TEST-001",
             priority="low",
             assigned_at=datetime.utcnow()
         )
-        with self.assertRaises(ValueError):
+        with self.assertRaises(InvalidPriority):
             assignment.change_priority("critical")
 
 
@@ -337,8 +342,8 @@ class CreateAssignmentUseCaseTests(TestCase):
         self.mock_publisher.publish.assert_not_called()
 
     def test_create_assignment_invalid_priority(self):
-        """Crear con prioridad inválida debe lanzar ValueError"""
-        with self.assertRaises(ValueError):
+        """Crear con prioridad inválida debe lanzar InvalidPriority"""
+        with self.assertRaises(InvalidPriority):
             self.use_case.execute(
                 ticket_id="UC-INVALID",
                 priority="critical"
@@ -378,8 +383,8 @@ class ReassignTicketUseCaseTests(TestCase):
         self.assertEqual(event.new_priority, "high")
 
     def test_reassign_ticket_not_found(self):
-        """Reasignar ticket inexistente debe lanzar ValueError"""
-        with self.assertRaises(ValueError) as context:
+        """Reasignar ticket inexistente debe lanzar AssignmentNotFound"""
+        with self.assertRaises(AssignmentNotFound) as context:
             self.use_case.execute(
                 ticket_id="NONEXISTENT",
                 new_priority="high"
@@ -399,8 +404,8 @@ class ReassignTicketUseCaseTests(TestCase):
         self.mock_publisher.publish.assert_not_called()
 
     def test_reassign_ticket_invalid_priority(self):
-        """Reasignar a prioridad inválida debe lanzar ValueError"""
-        with self.assertRaises(ValueError):
+        """Reasignar a prioridad inválida debe lanzar InvalidPriority"""
+        with self.assertRaises(InvalidPriority):
             self.use_case.execute(
                 ticket_id="UC-REASSIGN-001",
                 new_priority="urgent"
