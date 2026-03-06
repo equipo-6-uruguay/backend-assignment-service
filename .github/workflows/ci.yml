@@ -21,6 +21,7 @@ on:
       - main
       - develop
       - 'feature/**'
+  workflow_dispatch:
 
 jobs:
   test:

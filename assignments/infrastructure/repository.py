@@ -5,6 +5,7 @@ Adaptador entre el dominio y la base de datos.
 from typing import Optional, List
 
 from assignments.domain.entities import Assignment
+from assignments.domain.exceptions import AssignmentNotFound
 from assignments.domain.repository import AssignmentRepository
 from .django_models import TicketAssignmentModel
 
@@ -19,7 +20,10 @@ class DjangoAssignmentRepository(AssignmentRepository):
     def save(self, assignment: Assignment) -> Assignment:
         """Persiste una asignación"""
         if assignment.id:
-            model = TicketAssignmentModel.objects.get(id=assignment.id)
+            try:
+                model = TicketAssignmentModel.objects.get(id=assignment.id)
+            except TicketAssignmentModel.DoesNotExist:
+                raise AssignmentNotFound(f"No existe asignación con ID {assignment.id}")
             model.priority = assignment.priority
             model.assigned_to = assignment.assigned_to
             model.save()

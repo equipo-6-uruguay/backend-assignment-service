@@ -6,6 +6,7 @@ Responsabilidad única: cambiar la prioridad de una asignación existente.
 from datetime import datetime
 
 from assignments.domain.entities import Assignment
+from assignments.domain.exceptions import AssignmentNotFound
 from assignments.domain.repository import AssignmentRepository
 from assignments.domain.events import AssignmentReassigned
 from assignments.application.event_publisher import EventPublisher
@@ -43,7 +44,7 @@ class ReassignTicket:
         assignment = self.repository.find_by_ticket_id(ticket_id)
         
         if not assignment:
-            raise ValueError(f"No existe asignación para el ticket {ticket_id}")
+            raise AssignmentNotFound(f"No existe asignación para el ticket {ticket_id}")
         
         old_priority = assignment.priority
         

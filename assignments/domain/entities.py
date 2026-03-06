@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+from assignments.domain.exceptions import InvalidPriority, InvalidTicketId
+
 
 @dataclass
 class Assignment:
@@ -33,10 +35,10 @@ class Assignment:
     def _validate(self):
         """Ejecuta todas las validaciones de dominio"""
         if not self.ticket_id or not self.ticket_id.strip():
-            raise ValueError("ticket_id es requerido y no puede estar vacío")
+            raise InvalidTicketId("ticket_id es requerido y no puede estar vacío")
         
         if self.priority not in self.VALID_PRIORITIES:
-            raise ValueError(
+            raise InvalidPriority(
                 f"priority debe ser uno de {self.VALID_PRIORITIES}, "
                 f"recibido: {self.priority}"
             )
@@ -47,7 +49,7 @@ class Assignment:
         Valida que la nueva prioridad sea válida.
         """
         if new_priority not in self.VALID_PRIORITIES:
-            raise ValueError(
+            raise InvalidPriority(
                 f"priority debe ser uno de {self.VALID_PRIORITIES}, "
                 f"recibido: {new_priority}"
             )
